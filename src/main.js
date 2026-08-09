@@ -1,1 +1,1 @@
-console.log('hello')
+console.log('BioBlanks JS loaded from GitHub ✅');
