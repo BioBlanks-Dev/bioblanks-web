@@ -1,0 +1,248 @@
+/* ==========================================================================
+   BioBlanks — PDP layout
+   Loaded from the repo via jsDelivr. Targets existing Webflow classes.
+
+   Depends on: the `animation-tabs` embed in the panel being emptied.
+   Its rules are all !important and will otherwise win over everything here.
+   ========================================================================== */
+
+:root {
+  --bb-gold: #ffd700;
+  --bb-gold-glow: rgba(255, 215, 0, .55);
+  --bb-tab-off: #a3a39d;
+  --bb-tab-on: #333332;
+  --bb-line: #e6e5e0;
+  --bb-ink-soft: #5f5f59;
+  --bb-rail: 64px;
+  --bb-rail-gap: 16px;
+  --bb-rail-top: 92px;
+  --bb-thumb-radius: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   1. Two-column shell
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 992px) {
+  .product-header_component {
+    grid-template-columns: 1fr 1fr;
+    grid-column-gap: 0;
+    grid-row-gap: 0;
+    align-items: start;
+  }
+
+  .padding-section-product { padding-top: 0; padding-bottom: 0; }
+}
+
+/* --------------------------------------------------------------------------
+   2. Gallery — vertical stack
+   Swiper sets inline transforms and widths on these elements, so the
+   overrides below need !important until its init is removed from page code.
+   -------------------------------------------------------------------------- */
+
+.slider-product_component { position: relative; }
+
+.product_swiper-left { display: block; }
+
+.product_swiper-left .swiper.is-slider {
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.product_swiper-left .swiper-wrapper.is-slider {
+  display: block !important;
+  height: auto !important;
+  transform: none !important;
+  gap: 0 !important;
+}
+
+.product_swiper-left .swiper-slide.is-slider {
+  width: 100% !important;
+  height: auto !important;
+  margin: 0 !important;
+  aspect-ratio: 4 / 5;
+  display: block;
+}
+
+.product_swiper-left .swiper-slide.is-slider img,
+.product_swiper-left .swiper-slide.is-slider picture {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   3. Thumbnail rail
+   Zero-height sticky wrapper so the rail overlays the imagery without
+   taking any layout space. Duplicate the gallery Collection List in the
+   Designer and give the wrapper .product_thumb-rail.
+   -------------------------------------------------------------------------- */
+
+.product_thumb-rail {
+  position: sticky;
+  top: var(--bb-rail-top);
+  height: 0;
+  z-index: 20;
+}
+
+.product_thumb-rail .w-dyn-items {
+  position: absolute;
+  top: 0;
+  left: var(--bb-rail-gap);
+  width: var(--bb-rail);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.product_thumb-rail .w-dyn-item {
+  width: 100%;
+  aspect-ratio: 4 / 5;
+  border-radius: var(--bb-thumb-radius);
+  overflow: hidden;
+  cursor: pointer;
+  opacity: .38;
+  transition: opacity .25s ease;
+}
+
+.product_thumb-rail .w-dyn-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.product_thumb-rail .w-dyn-item:hover { opacity: .7; }
+.product_thumb-rail .w-dyn-item.is-active,
+.product_thumb-rail .w-dyn-item.is-active:hover { opacity: 1; }
+
+@media screen and (max-width: 991px) {
+  .product_thumb-rail { display: none; }
+}
+
+/* --------------------------------------------------------------------------
+   4. Panel — sticky beside the scrolling gallery
+   -------------------------------------------------------------------------- */
+
+@media screen and (min-width: 992px) {
+  .product-header_content-inner-wrapper {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 82px 44px 22px;
+  }
+
+  .product-header_tabs {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .product-header_tabs-content {
+    flex: 1;
+    overflow-y: auto;
+    padding-right: 6px;
+  }
+
+  .product-header_tabs-content::-webkit-scrollbar { width: 4px; }
+  .product-header_tabs-content::-webkit-scrollbar-thumb {
+    background: var(--bb-line);
+    border-radius: 4px;
+  }
+
+  .product-actions_wrap { flex-shrink: 0; padding-top: 18px; }
+}
+
+/* --------------------------------------------------------------------------
+   5. Tabs — replaces the animation-tabs embed
+   Flat labels, gold dot, soft gold glow beneath the active title.
+   -------------------------------------------------------------------------- */
+
+.product-header_tabs-menu {
+  display: flex;
+  gap: 26px;
+  flex-shrink: 0;
+  margin-bottom: 26px;
+  background: none;
+  border: 0;
+}
+
+.product-header_tab-link {
+  position: relative;
+  padding: 0 0 11px;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  transition: color .25s ease;
+}
+
+.product-header_tab-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 6px;
+  height: 2.5px;
+  border-radius: 50%;
+  background: var(--bb-gold);
+  filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .3s ease;
+}
+
+.product-header_tab-link.w--current::after { opacity: .42; }
+
+.product-header_tab-link .text-tabs {
+  color: var(--bb-tab-off);
+  font-weight: 400;
+  transition: color .25s ease;
+}
+
+.product-header_tab-link.w--current .text-tabs { color: var(--bb-tab-on); }
+
+/* the dot */
+.element-decorate {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--bb-gold);
+  opacity: 0;
+  transition: opacity .25s ease;
+}
+
+.product-header_tab-link.w--current .element-decorate { opacity: 1; }
+
+/* --------------------------------------------------------------------------
+   6. Action buttons — one visible per tab, driven by pdp.js
+   -------------------------------------------------------------------------- */
+
+.product-actions_wrap [data-bb-hidden="true"] { display: none !important; }
+
+.add-to-cart_button[disabled] {
+  opacity: .45;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+/* --------------------------------------------------------------------------
+   7. Reduced motion
+   -------------------------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .product-header_tab-link,
+  .product-header_tab-link::after,
+  .element-decorate,
+  .product_thumb-rail .w-dyn-item {
+    transition: none;
+  }
+}

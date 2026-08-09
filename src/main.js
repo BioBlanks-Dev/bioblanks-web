@@ -6,16 +6,31 @@
  */
 
 import BBCart from './cart.js';
+import initPDP from './pdp.js';
+
+const REPO = 'https://cdn.jsdelivr.net/gh/BioBlanks-Dev/bioblanks-web@main/src';
+
+// Stylesheets live alongside the modules. Loading from here rather than
+// Webflow's custom code keeps everything versioned in one place.
+function loadStyles(href) {
+  if (document.querySelector(`link[href="${href}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = href;
+  document.head.appendChild(link);
+}
+
+loadStyles(`${REPO}/pdp.css`);
 
 // Expose globally so page-level custom code in Webflow can reach it.
-// Module scope is isolated, so without this the inline scripts in
-// Webflow's page settings could not see the cart.
 window.BBCart = BBCart;
 
 BBCart.init()
-  .then((cart) => {
-    console.log('BioBlanks cart ready.', cart ? `${BBCart.itemCount()} item(s)` : 'empty');
+  .then(() => {
+    console.log('BioBlanks cart ready —', BBCart.itemCount(), 'item(s)');
   })
   .catch((err) => {
     console.error('BioBlanks cart failed to initialise:', err);
   });
+
+initPDP();
