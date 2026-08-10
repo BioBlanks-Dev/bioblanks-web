@@ -8,7 +8,10 @@
 import BBCart from './cart.js';
 import initPDP from './pdp.js';
 
-const REPO = 'https://cdn.jsdelivr.net/gh/BioBlanks-Dev/bioblanks-web@main/src';
+// Resolve sibling files relative to whatever version of this module was
+// loaded. Pointing the Webflow loader at @v1.2.3 therefore also loads the
+// stylesheet from @v1.2.3 — no hardcoded version to fall out of sync.
+const HERE = new URL('.', import.meta.url).href;
 
 // Stylesheets live alongside the modules. Loading from here rather than
 // Webflow's custom code keeps everything versioned in one place.
@@ -20,7 +23,7 @@ function loadStyles(href) {
   document.head.appendChild(link);
 }
 
-loadStyles(`${REPO}/pdp.css`);
+loadStyles(`${HERE}pdp.css`);
 
 // Expose globally so page-level custom code in Webflow can reach it.
 window.BBCart = BBCart;
