@@ -200,6 +200,27 @@ function buildBreadcrumb() {
 }
 
 /* -------------------------------------------------------------------------
+   Consistent title + SKU header on every tab (price only on Overview, which
+   gets its header from buildPanel). The other panes' own title/SKU blocks are
+   hidden in the Designer so these don't duplicate.
+   ------------------------------------------------------------------------- */
+
+function buildTabHeaders() {
+  const panel = document.querySelector(SEL.panel);
+  if (!panel || !state.pdp.title) return;
+  const panes = [...panel.querySelectorAll('.product-header_tab-details')];
+  panes.forEach((pane, i) => {
+    if (i === 0) return; // Overview already has its header from buildPanel
+    const header = el('div', 'bb-tab-header');
+    const row = el('div', 'bb-title-row');
+    row.append(el('h1', 'bb-title', state.pdp.title));
+    header.append(row);
+    if (state.pdp.sku) header.append(el('p', 'bb-sku', state.pdp.sku));
+    pane.prepend(header);
+  });
+}
+
+/* -------------------------------------------------------------------------
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
@@ -420,6 +441,7 @@ export default function initPDP() {
   readData();
 
   buildBreadcrumb();
+  buildTabHeaders();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();

@@ -266,6 +266,9 @@
 .bb-breadcrumb-link:hover { opacity: 1; }
 .bb-breadcrumb-sep { opacity: .5; }
 
+/* Per-tab header (title + SKU) on the non-Overview tabs */
+.bb-tab-header { margin: 0 0 22px; }
+
 /* Title + sample price */
 .bb-title-row {
   display: flex;
