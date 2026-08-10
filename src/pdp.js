@@ -324,6 +324,11 @@ function renderGallery() {
     img.alt = `${cw.name} view ${i + 1}`;
     img.loading = i === 0 ? 'eager' : 'lazy';
     img.decoding = 'async';
+    // The site runs Lenis smooth scroll + GSAP ScrollTrigger, both of which
+    // cache the page height on load. This gallery is injected afterwards and
+    // makes the page taller, so the scroll engine must re-measure or manual
+    // scrolling gets capped at the old (shorter) height.
+    img.addEventListener('load', recomputeScroll);
     shot.append(img);
     els.shots.append(shot);
 
@@ -342,6 +347,25 @@ function renderGallery() {
   });
 
   observeShots();
+  recomputeScroll();
+}
+
+// Force the site's smooth-scroll engine (Lenis) and GSAP ScrollTrigger to
+// re-measure the document height after the gallery grows the page. Lenis and
+// ScrollTrigger both recompute on a window 'resize', so dispatching one is the
+// reliable, dependency-free trigger; the direct calls are belt-and-suspenders
+// in case either is exposed globally. Debounced through rAF so a burst of
+// image 'load' events collapses into a single recompute.
+let recomputeQueued = false;
+function recomputeScroll() {
+  if (recomputeQueued) return;
+  recomputeQueued = true;
+  requestAnimationFrame(() => {
+    recomputeQueued = false;
+    try { window.lenis?.resize?.(); } catch (e) {}
+    try { window.ScrollTrigger?.refresh?.(); } catch (e) {}
+    window.dispatchEvent(new Event('resize'));
+  });
 }
 
 let shotObserver = null;
