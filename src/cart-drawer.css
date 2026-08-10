@@ -16,6 +16,11 @@
 
 html.bb-drawer-lock { overflow: hidden; }
 
+/* The legacy Shopyflow cart popup is replaced by .bb-drawer. Keep it hidden so
+   a leftover Webflow interaction on the nav icon can't reveal the dead markup. */
+.cart_popup,
+[sf-cart-popup] { display: none !important; }
+
 .bb-drawer {
   position: fixed;
   inset: 0;

@@ -182,14 +182,27 @@ async function guard(fn) {
   }
 }
 
+// Counter selector covers our own hook and the Webflow/Shopyflow nav badge.
+const COUNT_SEL = '[data-bb-cart-count], [sf-cart-count]';
+
+// Show the badge only when there are items; hide it entirely at 0. We stash the
+// element's natural display value the first time we see it so it restores
+// correctly (the badge is often a flex chip, not a plain block).
+function applyCount(el, count) {
+  el.textContent = count;
+  if (!el.dataset.bbDisplay) {
+    const d = getComputedStyle(el).display;
+    el.dataset.bbDisplay = d && d !== 'none' ? d : 'flex';
+  }
+  el.style.display = count > 0 ? el.dataset.bbDisplay : 'none';
+  el.toggleAttribute('data-bb-empty', count === 0);
+}
+
 function syncCount(cart) {
   const count = cart?.items
     ? cart.items.reduce((t, i) => t + (i.quantity || 0), 0)
     : 0;
-  document.querySelectorAll('[data-bb-cart-count]').forEach((el) => {
-    el.textContent = count;
-    el.toggleAttribute('data-bb-empty', count === 0);
-  });
+  document.querySelectorAll(COUNT_SEL).forEach((el) => applyCount(el, count));
 }
 
 /* -------------------------------------------------------------------------
@@ -197,13 +210,22 @@ function syncCount(cart) {
    ------------------------------------------------------------------------- */
 
 export default function initCartDrawer() {
-  // Delegate so triggers work even if the nav is injected after load.
+  // Delegate so triggers work even if the nav is injected after load. The
+  // Webflow nav cart icon carries [sf-cart-open] (leftover Shopyflow markup).
   document.addEventListener('click', (e) => {
-    const toggle = e.target.closest('[data-bb-cart-toggle]');
+    const toggle = e.target.closest('[data-bb-cart-toggle], [sf-cart-open]');
     if (toggle) {
       e.preventDefault();
       open();
     }
+  });
+
+  // Hide the static nav counter immediately (it ships showing "0"), capturing
+  // its natural display first so the real count can restore it on sync.
+  document.querySelectorAll('[sf-cart-count]').forEach((el) => {
+    const d = getComputedStyle(el).display;
+    el.dataset.bbDisplay = d && d !== 'none' ? d : 'flex';
+    el.style.display = 'none';
   });
 
   BBCart.on('cartUpdate', ({ cart, type }) => {
