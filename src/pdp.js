@@ -327,26 +327,30 @@ function buildSizeFit() {
   const pane = findSizeFitPane();
   if (!pane) return;
 
-  const blocks = [...pane.children].filter((c) => !c.classList.contains('bb-tab-header'));
-  const measurements = blocks.find((c) =>
-    (c.textContent || '').trim().toLowerCase().startsWith('measurement')
-  );
-  if (!measurements) return; // unexpected layout — leave the tab untouched
+  const hasTable = (el) => !!el.querySelector('.fit-table-wrap, .fit-table, table');
+  if (!hasTable(pane)) return; // no measurements table — leave the tab untouched
 
-  blocks.forEach((block) => {
-    if (block !== measurements) {
-      block.style.display = 'none'; // Fit Guide blocks
-      return;
-    }
-    // Match the other section headers: bump the "Measurements" heading to 14px.
-    [...block.querySelectorAll('*')].forEach((n) => {
-      const own = [...n.childNodes]
-        .filter((x) => x.nodeType === 3)
-        .map((x) => x.textContent)
-        .join('')
-        .trim();
-      if (/^measurements$/i.test(own)) n.style.fontSize = '14px';
+  // The Fit Guide and the Measurements table are interleaved (and duplicated
+  // across desktop/mobile blocks). Hide only Fit Guide blocks that don't hold
+  // the table; recurse into wrappers that contain both so the table survives.
+  const stripFitGuide = (container) => {
+    [...container.children].forEach((child) => {
+      if (child.classList.contains('bb-tab-header')) return;
+      const mentionsFitGuide = /fit guide/i.test(child.textContent || '');
+      const childHasTable = hasTable(child);
+      if (mentionsFitGuide && !childHasTable) {
+        child.style.display = 'none'; // a pure Fit Guide block
+      } else if (mentionsFitGuide && childHasTable) {
+        stripFitGuide(child); // wrapper holding both — go one level deeper
+      }
+      // a block with the table and no Fit Guide is kept as-is
     });
+  };
+  stripFitGuide(pane);
+
+  // Match the other section headers: bump the Measurements heading to 14px.
+  [...pane.querySelectorAll('.text-weight-medium')].forEach((h) => {
+    if (/^measurements$/i.test((h.textContent || '').trim())) h.style.fontSize = '14px';
   });
 }
 
