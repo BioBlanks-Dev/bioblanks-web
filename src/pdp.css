@@ -136,7 +136,9 @@
     height: 100vh;
     display: flex;
     flex-direction: column;
-    padding: 82px 44px 22px;
+    /* Right padding matches the top-right nav cluster (.container-rigth-navbar
+       is right: 2.5rem) so the panel's content edge aligns with the nav. */
+    padding: 82px 2.5rem 22px 44px;
   }
 
   .product-header_tabs {
