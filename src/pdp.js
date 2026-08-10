@@ -398,6 +398,23 @@ function buildCustomization() {
   const pane = findCustomizationPane();
   if (!pane) return;
 
+  // The original Webflow content mixes the customization image gallery in with
+  // text we're replacing (and duplicates it across desktop/mobile blocks).
+  // Harvest the gallery images (de-duped by src) before hiding that content, so
+  // we can re-render just the gallery beneath our copy.
+  const gallery = [];
+  const seen = new Set();
+  [...pane.children].forEach((child) => {
+    if (child.classList.contains('bb-tab-header') || child.classList.contains('bb-custom')) return;
+    child.querySelectorAll('img').forEach((im) => {
+      const src = im.getAttribute('src') || im.src;
+      if (src && !seen.has(src)) {
+        seen.add(src);
+        gallery.push({ src, alt: im.getAttribute('alt') || '' });
+      }
+    });
+  });
+
   // Replace the original Webflow customization content with ours.
   [...pane.children].forEach((child) => {
     if (!child.classList.contains('bb-tab-header') && !child.classList.contains('bb-custom')) {
@@ -437,6 +454,21 @@ function buildCustomization() {
   if (c.minimums) {
     wrap.append(el('h2', 'bb-panel-heading', 'Minimums'));
     wrap.append(el('p', 'bb-desc', c.minimums));
+  }
+
+  // The customization example gallery, re-rendered beneath the copy.
+  if (gallery.length) {
+    const gal = el('div', 'bb-custom-gallery');
+    gallery.forEach((g) => {
+      const shot = el('div', 'bb-custom-shot');
+      const img = el('img');
+      img.src = g.src;
+      img.alt = g.alt;
+      img.loading = 'lazy';
+      shot.append(img);
+      gal.append(shot);
+    });
+    wrap.append(gal);
   }
 
   pane.append(wrap);
