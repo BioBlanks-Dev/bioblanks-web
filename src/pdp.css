@@ -173,19 +173,25 @@
   border: 0;
 }
 
-.product-header_tab-link {
+.product-header_tabs-menu .product-header_tab-link,
+.product-header_tabs-menu .product-header_tab-link:hover,
+.product-header_tabs-menu .product-header_tab-link:focus,
+.product-header_tabs-menu .product-header_tab-link:active,
+.product-header_tabs-menu .product-header_tab-link.w--current {
   position: relative;
-  padding: 0 0 11px;
-  background: transparent;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
+  padding: 0 0 11px !important;
+  background: transparent !important;
+  background-color: transparent !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  transform: none !important;
   transition: color .25s ease;
 }
 
-.product-header_tab-link::after {
+.product-header_tabs-menu .product-header_tab-link::after {
   content: "";
   position: absolute;
   left: 0;
@@ -200,27 +206,34 @@
   transition: opacity .3s ease;
 }
 
-.product-header_tab-link.w--current::after { opacity: .42; }
+.product-header_tabs-menu .product-header_tab-link.w--current::after { opacity: .42; }
 
-.product-header_tab-link .text-tabs {
-  color: var(--bb-tab-off);
+.product-header_tabs-menu .product-header_tab-link .text-tabs {
+  color: var(--bb-tab-off) !important;
   font-weight: 400;
+  transform: none !important;
   transition: color .25s ease;
 }
 
-.product-header_tab-link.w--current .text-tabs { color: var(--bb-tab-on); }
-
-/* the dot */
-.element-decorate {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--bb-gold);
-  opacity: 0;
-  transition: opacity .25s ease;
+.product-header_tabs-menu .product-header_tab-link.w--current .text-tabs {
+  color: var(--bb-tab-on) !important;
 }
 
-.product-header_tab-link.w--current .element-decorate { opacity: 1; }
+/* the dot — the old embed toggled display, so force it visible and
+   animate opacity instead */
+.product-header_tab-link .element-decorate {
+  display: block !important;
+  width: 8px !important;
+  height: 8px !important;
+  min-width: 8px;
+  border-radius: 50% !important;
+  background: var(--bb-gold) !important;
+  opacity: 0 !important;
+  transform: none !important;
+  transition: opacity .25s ease !important;
+}
+
+.product-header_tab-link.w--current .element-decorate { opacity: 1 !important; }
 
 /* --------------------------------------------------------------------------
    6. Action buttons — one visible per tab, driven by pdp.js
