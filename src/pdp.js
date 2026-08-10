@@ -535,6 +535,12 @@ export default function initPDP() {
     console.warn('[PDP] no colorway data found — panel not built.');
   }
 
+  // Reveal the product header now that the layout has been (re)built. An
+  // anti-flicker rule in the site <head> keeps it hidden until this class is
+  // present, so the stock Webflow layout never flashes before ours settles.
+  // Set unconditionally so products without colorway JSON still reveal.
+  document.documentElement.classList.add('bb-pdp-ready');
+
   BBCart.on('cartUpdate', () => {
     document.querySelectorAll('[data-bb-cart-count]').forEach((node) => {
       node.textContent = BBCart.itemCount();

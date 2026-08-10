@@ -75,6 +75,9 @@ function open() {
   root.classList.add('is-open');
   root.setAttribute('aria-hidden', 'false');
   document.documentElement.classList.add('bb-drawer-lock');
+  // Lenis intercepts the wheel, so overflow:hidden alone won't stop the page
+  // scrolling behind the drawer — pause it explicitly.
+  try { window.lenis?.stop?.(); } catch (e) {}
 }
 
 function close() {
@@ -82,6 +85,7 @@ function close() {
   root.classList.remove('is-open');
   root.setAttribute('aria-hidden', 'true');
   document.documentElement.classList.remove('bb-drawer-lock');
+  try { window.lenis?.start?.(); } catch (e) {}
 }
 
 /* -------------------------------------------------------------------------

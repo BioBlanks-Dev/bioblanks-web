@@ -8,6 +8,7 @@
 import BBCart from './cart.js';
 import initPDP from './pdp.js';
 import initCartDrawer from './cart-drawer.js';
+import initSmoothScroll from './smooth-scroll.js';
 
 // Resolve sibling files relative to whatever version of this module was
 // loaded. Pointing the Webflow loader at @v1.2.3 therefore also loads the
@@ -26,6 +27,10 @@ function loadStyles(href) {
 
 loadStyles(`${HERE}pdp.css`);
 loadStyles(`${HERE}cart-drawer.css`);
+
+// Smooth scroll (Lenis) is now owned by the repo — start it ASAP so the
+// experience matches the old Webflow-footer behaviour across the site.
+initSmoothScroll();
 
 // Expose globally so page-level custom code in Webflow can reach it.
 window.BBCart = BBCart;
