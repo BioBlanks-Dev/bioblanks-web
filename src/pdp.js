@@ -308,6 +308,49 @@ function buildMaterials() {
 }
 
 /* -------------------------------------------------------------------------
+   Size & Fit tab — drop the Fit Guide blocks, keep the Measurements table,
+   and bump its heading to 14px so it matches the other section headers.
+   Scoped to this pane so shared Webflow utility classes elsewhere are safe.
+   ------------------------------------------------------------------------- */
+
+function findSizeFitPane() {
+  const panel = document.querySelector(SEL.panel);
+  if (!panel) return null;
+  const panes = [...panel.querySelectorAll('.product-header_tab-details')];
+  const links = [...panel.querySelectorAll(SEL.tabLink)];
+  const idx = links.findIndex((l) => /size|fit/i.test(l.textContent || ''));
+  if (idx >= 0 && panes[idx]) return panes[idx];
+  return panes[3] || null; // tab order: Overview, Customization, Materials, Size & Fit
+}
+
+function buildSizeFit() {
+  const pane = findSizeFitPane();
+  if (!pane) return;
+
+  const blocks = [...pane.children].filter((c) => !c.classList.contains('bb-tab-header'));
+  const measurements = blocks.find((c) =>
+    (c.textContent || '').trim().toLowerCase().startsWith('measurement')
+  );
+  if (!measurements) return; // unexpected layout — leave the tab untouched
+
+  blocks.forEach((block) => {
+    if (block !== measurements) {
+      block.style.display = 'none'; // Fit Guide blocks
+      return;
+    }
+    // Match the other section headers: bump the "Measurements" heading to 14px.
+    [...block.querySelectorAll('*')].forEach((n) => {
+      const own = [...n.childNodes]
+        .filter((x) => x.nodeType === 3)
+        .map((x) => x.textContent)
+        .join('')
+        .trim();
+      if (/^measurements$/i.test(own)) n.style.fontSize = '14px';
+    });
+  });
+}
+
+/* -------------------------------------------------------------------------
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
@@ -589,6 +632,7 @@ export default function initPDP() {
   buildBreadcrumb();
   buildTabHeaders();
   buildMaterials();
+  buildSizeFit();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();
