@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BioBlanks PDP — vertical gallery</title>
+<style>
+  :root {
+    --ink: #14140f;
+    --ink-soft: #5f5f59;
+    --ink-faint: #a6a6a0;
+    --line: #e6e5e0;
+    --canvas: #ebebe9;
+    --paper: #fff;
+    --green: #74f081;
+    --green-soft: #e4fbe7;
+    --green-ink: #2b7a37;
+    --dot: #ffd700;
+    --dot-glow: rgba(255,215,0,.55);
+    --tab-on: #14140f;
+    --tab-off: #9a9a94;
+    --chrome: rgba(118,118,112,.82);
+    --nav-top: 14px;
+    --rail: 64px;
+    --thumb-radius: 4px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ---------------- floating chrome ---------------- */
+
+  .chrome {
+    position: fixed;
+    top: var(--nav-top);
+    left: 0;
+    right: 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 0 14px;
+    z-index: 60;
+    pointer-events: none;
+  }
+
+  .chrome > * { pointer-events: auto; }
+
+  .pill {
+    background: var(--chrome);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+  }
+
+  .navbar_left { overflow: hidden; transition: border-radius .5s cubic-bezier(.16,1,.3,1); }
+  .navbar_left.is-open { border-radius: 22px; }
+
+  .pill-row { display: flex; align-items: center; height: 56px; }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    padding: 0 20px;
+    color: #fff;
+    font-weight: 500;
+    font-size: 19px;
+    letter-spacing: -.02em;
+    text-decoration: none;
+  }
+
+  .logo sup { font-size: 9px; vertical-align: super; }
+
+  .menu-parent {
+    width: 58px;
+    height: 56px;
+    display: grid;
+    place-items: center;
+    gap: 5px;
+    background: none;
+    border: 0;
+    border-left: 1px solid rgba(255,255,255,.25);
+    cursor: pointer;
+    padding: 0;
+  }
+
+  .menu-bars { display: grid; gap: 5px; }
+  .menu-bars i { display: block; width: 20px; height: 1.5px; background: #fff; transition: transform .3s ease, opacity .3s ease; }
+  .is-open .menu-bars i:nth-child(1) { transform: translateY(6.5px) rotate(45deg); }
+  .is-open .menu-bars i:nth-child(2) { opacity: 0; }
+  .is-open .menu-bars i:nth-child(3) { transform: translateY(-6.5px) rotate(-45deg); }
+
+  .menu_in-wrap {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .5s cubic-bezier(.16,1,.3,1);
+  }
+
+  .navbar_left.is-open .menu_in-wrap { grid-template-rows: 1fr; }
+  .menu_in-inner { overflow: hidden; }
+  .menu_in-wrap nav { display: grid; padding: 6px 20px 16px; }
+
+  .menu_links {
+    color: #fff;
+    text-decoration: none;
+    font-size: 17px;
+    padding: 6px 0;
+    opacity: .85;
+  }
+
+  .menu_links:hover { opacity: 1; }
+
+  .breadcrumb {
+    flex-shrink: 0;
+    font-size: 10px;
+    line-height: 1.4;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+  }
+
+  .breadcrumb a { color: inherit; text-decoration: none; opacity: .6; transition: opacity .2s ease; }
+  .breadcrumb a:hover { opacity: 1; }
+
+  .chrome-right { gap: 4px; padding: 0 6px 0 14px; }
+
+  .icon-btn {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    position: relative;
+    color: #fff;
+  }
+
+  .icon-btn svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 1.6; }
+
+  .badge {
+    position: absolute;
+    top: 4px;
+    right: 2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border-radius: 999px;
+    background: var(--green);
+    color: var(--ink);
+    font-size: 10px;
+    font-weight: 500;
+    display: grid;
+    place-items: center;
+  }
+
+  .cta {
+    height: 44px;
+    padding: 0 22px;
+    margin-left: 6px;
+    border: 0;
+    border-radius: 999px;
+    background: var(--green);
+    color: var(--ink);
+    font: inherit;
+    font-size: 14.5px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* ---------------- shell ---------------- */
+
+  .pdp { display: grid; grid-template-columns: 1fr 1fr; align-items: start; }
+
+  /* ---------------- gallery ---------------- */
+
+  .gallery { position: relative; background: var(--canvas); }
+
+  .thumb-rail {
+    position: sticky;
+    top: 92px;
+    height: 0;
+    z-index: 20;
+  }
+
+  .thumbs {
+    position: absolute;
+    top: 0;
+    left: 16px;
+    width: var(--rail);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .thumb {
+    width: 100%;
+    aspect-ratio: 4/5;
+    padding: 0;
+    border: 0;
+    border-radius: var(--thumb-radius);
+    overflow: hidden;
+    background: none;
+    cursor: pointer;
+    opacity: .38;
+    transition: opacity .25s ease;
+  }
+
+  .thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  .thumb[aria-current="true"] { opacity: 1; }
+  .thumb:hover { opacity: .7; }
+  .thumb[aria-current="true"]:hover { opacity: 1; }
+  .thumb:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .shot { width: 100%; aspect-ratio: 4/5; }
+  .shot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+  /* ---------------- panel ---------------- */
+
+  .panel {
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 82px 44px 22px;
+  }
+
+  .tabs {
+    display: flex;
+    gap: 26px;
+    flex-shrink: 0;
+    margin-bottom: 26px;
+  }
+
+  .tab {
+    position: relative;
+    height: 34px;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 15.5px;
+    color: var(--tab-off);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    transition: color .25s ease;
+  }
+
+  .tab .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--dot);
+    opacity: 0;
+    transition: opacity .25s ease;
+  }
+
+  .tab::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 6px;
+    height: 2.5px;
+    border-radius: 50%;
+    background: var(--dot);
+    filter: blur(6px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .3s ease;
+  }
+
+  .tab:hover { color: var(--ink); }
+  .tab[aria-selected="true"] { color: var(--tab-on); }
+  .tab[aria-selected="true"] .dot { opacity: 1; }
+  .tab[aria-selected="true"]::after { opacity: .42; }
+  .tab:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+  .scroller { flex: 1; overflow-y: auto; padding-right: 6px; }
+  .scroller::-webkit-scrollbar { width: 4px; }
+  .scroller::-webkit-scrollbar-thumb { background: var(--line); border-radius: 4px; }
+
+  .title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; }
+  h1 { font-size: 24px; font-weight: 500; letter-spacing: -.02em; margin: 0; line-height: 1.2; }
+
+  .title-price {
+    font-size: 24px;
+    font-weight: 500;
+    letter-spacing: -.02em;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .acc { margin-top: 11px; }
+
+  .acc-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    padding: 0 0 8px;
+    background: none;
+    border: 0;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    text-align: left;
+  }
+
+  .acc-head:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .acc-sign {
+    position: relative;
+    width: 8px;
+    height: 8px;
+    flex-shrink: 0;
+  }
+
+  .acc-sign::before,
+  .acc-sign::after {
+    content: "";
+    position: absolute;
+    background: var(--ink);
+    transition: transform .35s cubic-bezier(.16,1,.3,1), opacity .35s ease;
+  }
+
+  .acc-sign::before { left: 0; top: 3.5px; width: 8px; height: 1px; }
+  .acc-sign::after { left: 3.5px; top: 0; width: 1px; height: 8px; }
+
+  .acc[open] .acc-sign::after { transform: rotate(90deg); opacity: 0; }
+
+  .acc-body {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows .4s cubic-bezier(.16,1,.3,1);
+  }
+
+  .acc[open] .acc-body { grid-template-rows: 1fr; }
+  .acc-body > div { overflow: hidden; }
+  .acc-body .inner { padding-bottom: 2px; }
+  .acc-body h2 { margin-top: 0; }
+  .sku { font-size: 12px; color: var(--ink-soft); margin: 7px 0 0; }
+  .blurb { font-size: 12px; line-height: 1.65; color: var(--ink); margin: 14px 0 0; }
+
+  h2 { font-size: 12px; font-weight: 500; margin: 22px 0 8px; }
+
+  .bullets { margin: 0; padding-left: 16px; color: var(--ink-soft); font-size: 12px; line-height: 1.65; }
+  .bullets li { margin: 4px 0; }
+
+  .price-line { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; font-size: 12px; }
+  .price-line .link { color: var(--green-ink); text-decoration: none; font-size: 12px; }
+  .price-line .link:hover { text-decoration: underline; }
+
+  .swatches { display: flex; gap: 8px; margin-top: 10px; }
+
+  .swatch {
+    width: 58px;
+    aspect-ratio: 4/5;
+    padding: 0;
+    border: 0;
+    border-radius: var(--thumb-radius);
+    overflow: hidden;
+    background: none;
+    cursor: pointer;
+    opacity: .38;
+    transition: opacity .25s ease;
+  }
+
+  .swatch img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .swatch[aria-pressed="true"] { opacity: 1; }
+  .swatch:hover { opacity: .7; }
+  .swatch[aria-pressed="true"]:hover { opacity: 1; }
+  .swatch:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+  .spec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .spec-table th { text-align: left; font-weight: 400; color: var(--ink-soft); padding: 8px 0; border-bottom: 1px solid var(--line); }
+  .spec-table td { padding: 8px 0; border-bottom: 1px solid var(--line); text-align: right; }
+
+  .chain { list-style: none; margin: 0; padding: 0; }
+  .chain li { position: relative; padding-left: 18px; margin: 7px 0; font-size: 12px; color: var(--ink-soft); }
+  .chain li::before { content: ""; position: absolute; left: 0; top: .55em; width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+  .chain li:not(:last-child)::after { content: ""; position: absolute; left: 2.5px; top: calc(.55em + 8px); width: 1px; height: calc(100% - 1px); background: var(--line); }
+
+  /* ---------------- buy ---------------- */
+
+  .buy-dock { flex-shrink: 0; padding-top: 18px; display: grid; gap: 8px; }
+
+  .sizes { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-top: 8px; }
+
+  .size {
+    height: 38px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--paper);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+    transition: border-color .2s ease, background .2s ease, color .2s ease;
+  }
+
+  .size:hover:not(:disabled) { border-color: var(--ink); }
+  .size[aria-pressed="true"] { background: var(--ink); border-color: var(--ink); color: #fff; }
+  .size:disabled { color: var(--ink-faint); text-decoration: line-through; cursor: not-allowed; }
+
+  .btn {
+    width: 100%;
+    height: 52px;
+    border: 0;
+    border-radius: 999px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .btn[hidden] { display: none; }
+  .btn-sample { background: #ececea; color: var(--ink); }
+  .btn-sample:hover { background: #e2e2df; }
+  .btn-sample:disabled { color: var(--ink-faint); cursor: not-allowed; }
+  .btn-project { background: var(--green); color: var(--ink); }
+
+  @media (max-width: 1000px) {
+    .pdp { grid-template-columns: 1fr; }
+    .panel { position: static; height: auto; padding: 24px 18px 40px; }
+    .scroller { overflow: visible; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="pill navbar_left" id="navPill" style="flex-direction: column; align-items: stretch;">
+    <div class="pill-row">
+      <a class="logo" href="#">BIOBLANKS<sup>&reg;</sup> &#10022;</a>
+      <button class="menu-parent" id="menuTrigger" aria-expanded="false" aria-label="Menu">
+        <span class="menu-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+      </button>
+    </div>
+    <div class="menu_in-wrap">
+      <div class="menu_in-inner">
+        <nav>
+          <a class="menu_links" href="#">Catalog</a>
+          <a class="menu_links" href="#">Materials</a>
+          <a class="menu_links" href="#">Processes</a>
+          <a class="menu_links" href="#">About</a>
+        </nav>
+      </div>
+    </div>
+  </div>
+
+  <div class="pill chrome-right">
+    <button class="icon-btn" aria-label="Search">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    </button>
+    <button class="icon-btn" aria-label="Cart">
+      <svg viewBox="0 0 24 24"><path d="M4 8h16l-1.2 12H5.2z"/><path d="M9 8V6a3 3 0 016 0v2"/></svg>
+      <span class="badge" id="cartBadge">0</span>
+    </button>
+    <button class="cta">Start New Project &#10022;</button>
+  </div>
+</div>
+
+<div class="pdp">
+
+  <div class="gallery">
+    <div class="thumb-rail"><div class="thumbs" id="thumbs"></div></div>
+    <div id="shots"></div>
+  </div>
+
+  <div class="panel">
+    <p class="breadcrumb">
+      <a href="#">Tees</a> &bull; Women&rsquo;s Classic Tee
+    </p>
+
+    <div class="tabs" role="tablist">
+      <button class="tab" role="tab" aria-selected="true" data-tab="overview"><span class="dot"></span>Overview</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="custom"><span class="dot"></span>Customization</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="materials"><span class="dot"></span>Materials</button>
+      <button class="tab" role="tab" aria-selected="false" data-tab="fit"><span class="dot"></span>Size &amp; Fit</button>
+    </div>
+
+    <div class="scroller">
+
+      <section data-panel="overview">
+        <div class="title-row">
+          <h1>Women&rsquo;s Classic Tee</h1>
+          <div class="title-price">$30.00</div>
+        </div>
+        <p class="sku">BIO-W-TEE-01</p>
+        <p class="blurb">Our classic silhouette thoughtfully redesigned with feminine proportions for an ideal fit. Created from our proprietary BioCircular&trade; Jersey fabric crafted from recycled and organic cotton for minimized impact.</p>
+
+        <div class="acc" data-acc>
+          <button class="acc-head" aria-expanded="false">
+            <span class="acc-sign" aria-hidden="true"></span>
+            Product Details
+          </button>
+          <div class="acc-body"><div><div class="inner">
+            <ul class="bullets">
+              <li>50% organic // 50% recycled cotton</li>
+              <li>Jersey fabric, pre-shrunk &mdash; 225 GSM</li>
+              <li>30/2 compact ring-spun yarn</li>
+              <li>Garment dyed with low-impact fiber reactive dye</li>
+              <li>Bio-enzyme finish for anti-pilling and soft hand feel</li>
+            </ul>
+          </div></div></div>
+        </div>
+
+        <div class="acc" data-acc>
+          <button class="acc-head" aria-expanded="false">
+            <span class="acc-sign" aria-hidden="true"></span>
+            Wholesale Pricing
+          </button>
+          <div class="acc-body"><div><div class="inner">
+            <div class="price-line">
+              <span>Starting at <strong>$8.35</strong> / unit</span>
+              <a class="link" href="#">Pricing calculator</a>
+            </div>
+            <p style="font-size:12px;color:var(--ink-soft);margin:8px 0 0">Bulk pricing applies from 50 units per colorway.</p>
+          </div></div></div>
+        </div>
+
+        <h2>Colorway</h2>
+        <p style="font-size:12px;color:var(--ink-soft);margin:0" id="colorNote">Charcoal</p>
+        <div class="swatches" id="swatches"></div>
+
+        <h2>Size</h2>
+        <div class="sizes" id="sizes"></div>
+      </section>
+
+      <section data-panel="custom" hidden>
+        <h1>Customization</h1>
+        <p class="blurb">Every blank is a starting point. Choose how far you take it.</p>
+        <h2>Available Processes</h2>
+        <ul class="bullets">
+          <li>Garment dyeing &mdash; low-impact fiber reactive</li>
+          <li>Screen printing &mdash; water-based inks</li>
+          <li>Embroidery &mdash; recycled polyester thread</li>
+          <li>Custom labelling and neck tags</li>
+          <li>Washes and finishing treatments</li>
+        </ul>
+        <h2>Minimums</h2>
+        <div class="price-line">
+          <span>50 units per colorway</span>
+          <a class="link" href="#">Start new project</a>
+        </div>
+      </section>
+
+      <section data-panel="materials" hidden>
+        <h1>Materials</h1>
+        <p class="blurb">BioCircular&trade; Jersey blends organic and recycled cotton into a fabric engineered for circularity.</p>
+        <h2>Composition</h2>
+        <table class="spec-table">
+          <tr><th>Organic cotton</th><td>50%</td></tr>
+          <tr><th>Recycled cotton</th><td>50%</td></tr>
+          <tr><th>Weight</th><td>225 GSM</td></tr>
+          <tr><th>Yarn</th><td>30/2 compact ring-spun</td></tr>
+        </table>
+        <h2>Traceability</h2>
+        <ul class="chain">
+          <li>Cotton &rarr; India</li>
+          <li>Fabric knitting &rarr; Los Angeles, CA</li>
+          <li>Cut &amp; sewing &rarr; Baja California, MX</li>
+          <li>Garment dyeing &rarr; Los Angeles, CA</li>
+          <li>Embellishing &amp; decoration &rarr; Los Angeles, CA</li>
+          <li>Finishing &rarr; Los Angeles, CA</li>
+        </ul>
+      </section>
+
+      <section data-panel="fit" hidden>
+        <h1>Size &amp; fit</h1>
+        <p class="blurb">Relaxed feminine fit. Model is 5&rsquo;9&rdquo; and wears a size small.</p>
+        <h2>Measurements (Inches)</h2>
+        <table class="spec-table">
+          <tr><th>Size</th><td>Length / Width / Sleeve</td></tr>
+          <tr><th>XS</th><td>24.5 / 16.5 / 7.0</td></tr>
+          <tr><th>S</th><td>25.5 / 17.5 / 7.5</td></tr>
+          <tr><th>M</th><td>26.5 / 18.5 / 8.0</td></tr>
+          <tr><th>L</th><td>27.5 / 20.0 / 8.5</td></tr>
+          <tr><th>XL</th><td>28.5 / 21.5 / 9.0</td></tr>
+          <tr><th>2XL</th><td>29.5 / 23.0 / 9.5</td></tr>
+        </table>
+      </section>
+
+    </div>
+
+    <div class="buy-dock">
+      <button class="btn btn-sample" id="orderSample">Add to Cart</button>
+      <button class="btn btn-project" id="startProject" hidden>Start New Project &#10022;</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CDN = 'https://cdn.prod.website-files.com/6a29b993bf683f18b385dad1/';
+const SHARED = [
+  '6a29b993bf683f18b385de04_68d33d2b281653def16a2284_Cropped_20Boxy_20Tee_20_Front.avif',
+  '6a29b993bf683f18b385de00_Boxy_Crop_Tee_Male_Front_1_85d3aed5-ac5b-4a54-bac7-4efefa3c710d.avif',
+  '6a29b993bf683f18b385de03_Boxy_Crop_Tee_Male_Front_1_-1_1e5520f7-a49e-48e7-9078-9848c41dac37.avif',
+  '6a29b993bf683f18b385ddff_Cropped_Boxy_Tee_Back_aa53ff0c-1aa2-45cb-a65f-d848d8906d6b.avif',
+  '6a29b993bf683f18b385de02_Cropped_Boxy_Tee_Front_e9748332-8223-415b-b7e2-abaae7ef9a89.avif'
+].map(f => CDN + f);
+
+const SIZES = ['XS','S','M','L','XL','2XL'];
+const SAMPLE_PRICE = 30;
+
+const COLORWAYS = [
+  { name:'Charcoal', tint:'none', images:SHARED, variants:{
+      XS:{id:'38530a55-7fcc-48dc-a4d9-56fc4dbf8416',stock:4},
+      S:{id:'af6d0397-40db-4435-b07f-88d02c3c9750',stock:5},
+      M:{id:'dd46556f-afde-41f9-a78f-260524061bd5',stock:5},
+      L:{id:'f8e705c8-8194-4636-b02d-18690b2988cc',stock:5},
+      XL:{id:'9c84d5df-57fe-4150-821d-161e8b81d6f6',stock:4},
+      '2XL':{id:'976cbede-f524-4a3b-8c9f-95d107677df7',stock:2} } },
+  { name:'Ecru', tint:'sepia(.32) brightness(1.14) saturate(.65)', images:SHARED, variants:{
+      XS:{id:'89efc43e-a816-4104-8ccb-39310feefa59',stock:0},
+      S:{id:'bb5202e9-cda4-4998-b865-70f86f91fa95',stock:0},
+      M:{id:'d85a77b8-6660-47a5-8bde-196c880e6f88',stock:0},
+      L:{id:'25645dd5-197c-40e8-a288-51bba90ecf7e',stock:0},
+      XL:{id:'bc24b87a-f5c0-4170-b740-4e7f96898672',stock:0},
+      '2XL':{id:'c93016f6-970f-4178-a102-87a9b0a3b84e',stock:0} } }
+];
+
+let activeColor = 0, activeSize = null, cartCount = 0;
+
+const $ = id => document.getElementById(id);
+const money = n => new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n);
+
+function renderGallery() {
+  const cw = COLORWAYS[activeColor];
+  $('shots').innerHTML = '';
+  $('thumbs').innerHTML = '';
+
+  cw.images.forEach((src, i) => {
+    const fig = document.createElement('div');
+    fig.className = 'shot';
+    fig.id = 'shot-' + i;
+    const img = document.createElement('img');
+    img.src = src; img.alt = cw.name + ' view ' + (i+1);
+    img.loading = i === 0 ? 'eager' : 'lazy';
+    img.style.filter = cw.tint;
+    fig.appendChild(img);
+    $('shots').appendChild(fig);
+
+    const t = document.createElement('button');
+    t.className = 'thumb'; t.type = 'button';
+    t.setAttribute('aria-label','View image ' + (i+1));
+    t.setAttribute('aria-current', i === 0 ? 'true' : 'false');
+    const ti = document.createElement('img');
+    ti.src = src; ti.alt = ''; ti.style.filter = cw.tint;
+    t.appendChild(ti);
+    t.addEventListener('click', () => $('shot-'+i).scrollIntoView({block:'center'}));
+    $('thumbs').appendChild(t);
+  });
+
+  const shots = [...document.querySelectorAll('.shot')];
+  const thumbs = [...document.querySelectorAll('.thumb')];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      const idx = shots.indexOf(e.target);
+      thumbs.forEach((t,i) => t.setAttribute('aria-current', i === idx ? 'true':'false'));
+    });
+  }, { rootMargin: '-45% 0px -45% 0px' });
+  shots.forEach(s => io.observe(s));
+}
+
+function renderSwatches() {
+  const wrap = $('swatches');
+  wrap.innerHTML = '';
+  COLORWAYS.forEach((cw, i) => {
+    const b = document.createElement('button');
+    b.className = 'swatch'; b.type = 'button';
+    b.setAttribute('aria-pressed', i === activeColor ? 'true':'false');
+    b.setAttribute('aria-label', cw.name);
+    const img = document.createElement('img');
+    img.src = cw.images[0]; img.alt = ''; img.style.filter = cw.tint;
+    b.appendChild(img);
+    b.addEventListener('click', () => {
+      if (activeColor === i) return;
+      activeColor = i; activeSize = null;
+      $('colorNote').textContent = cw.name;
+      renderSwatches(); renderGallery(); renderSizes(); updateBuy();
+      window.scrollTo({ top: 0 });
+    });
+    wrap.appendChild(b);
+  });
+}
+
+function renderSizes() {
+  const cw = COLORWAYS[activeColor];
+  const wrap = $('sizes');
+  wrap.innerHTML = '';
+  SIZES.forEach(size => {
+    const v = cw.variants[size];
+    const b = document.createElement('button');
+    b.className = 'size'; b.type = 'button'; b.textContent = size;
+    b.disabled = !v || v.stock === 0;
+    b.setAttribute('aria-pressed', activeSize === size ? 'true':'false');
+    b.addEventListener('click', () => { activeSize = size; renderSizes(); updateBuy(); });
+    wrap.appendChild(b);
+  });
+}
+
+function updateBuy() {
+  const cw = COLORWAYS[activeColor];
+  const btn = $('orderSample');
+  const anyStock = Object.values(cw.variants).some(v => v.stock > 0);
+
+  if (!anyStock) {
+    btn.disabled = true;
+    btn.textContent = 'Sold Out';
+    return;
+  }
+
+  btn.textContent = 'Add to Cart';
+
+  if (activeSize) {
+    const v = cw.variants[activeSize];
+    btn.disabled = false;
+  } else {
+    btn.disabled = true;
+  }
+}
+
+$('orderSample').addEventListener('click', () => {
+  if (!activeSize) return;
+  const v = COLORWAYS[activeColor].variants[activeSize];
+  cartCount += 1;
+  $('cartBadge').textContent = cartCount;
+  activeSize = null;
+  renderSizes();
+  updateBuy();
+});
+
+function syncDock(tabName) {
+  const isCustom = tabName === 'custom';
+  $('startProject').hidden = !isCustom;
+  $('orderSample').hidden = isCustom;
+}
+
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.setAttribute('aria-selected', String(t === tab)));
+    document.querySelectorAll('[data-panel]').forEach(p => { p.hidden = p.dataset.panel !== tab.dataset.tab; });
+    document.querySelector('.scroller').scrollTop = 0;
+    syncDock(tab.dataset.tab);
+  });
+});
+
+syncDock(document.querySelector('.tab[aria-selected="true"]').dataset.tab);
+
+document.querySelectorAll('[data-acc]').forEach(acc => {
+  const head = acc.querySelector('.acc-head');
+  head.addEventListener('click', () => {
+    const open = !acc.hasAttribute('open');
+    acc.toggleAttribute('open', open);
+    head.setAttribute('aria-expanded', String(open));
+  });
+});
+
+const pill = $('navPill');
+$('menuTrigger').addEventListener('click', () => {
+  const open = !pill.classList.contains('is-open');
+  pill.classList.toggle('is-open', open);
+  $('menuTrigger').setAttribute('aria-expanded', String(open));
+});
+
+renderSwatches(); renderGallery(); renderSizes(); updateBuy();
+</script>
+
+</body>
+</html>
