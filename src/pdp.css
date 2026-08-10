@@ -276,6 +276,37 @@
    (Webflow's "hidden" would drop it from the published markup) but is hidden. */
 #bb-trace-anchor { display: none !important; }
 
+/* Materials tab — Composition (icon + fiber + %) and fabric spec rows */
+.bb-materials { margin-top: 2px; }
+.bb-comp { margin: 0; }
+.bb-comp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--bb-line);
+  font-size: 12px;
+}
+.bb-comp-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+.bb-comp-icon {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.bb-comp-name { color: var(--bb-ink-soft); }
+.bb-comp-val {
+  color: var(--bb-ink);
+  white-space: nowrap;
+  text-align: right;
+}
+
 /* Traceability chain — small green dots joined by a thin line (prototype) */
 .bb-trace { margin-top: 22px; }
 .bb-chain { list-style: none; margin: 0; padding: 0; }

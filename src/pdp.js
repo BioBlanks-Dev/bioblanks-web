@@ -221,23 +221,90 @@ function buildTabHeaders() {
 }
 
 /* -------------------------------------------------------------------------
-   Traceability chain (Materials tab) — matches the prototype's .chain.
-   Rebuilt from CMS so it isn't tied to the Webflow list's dot/line styling.
-   The original block is marked [data-bb-trace-anchor] and hidden in the
-   Designer; the rebuilt chain drops in right after it.
+   Materials tab — Composition (fiber icon + name + %), fabric specs
+   (Weight / Yarn) and the Traceability chain, all from CMS (pdp-json,
+   regenerated from the real Product fields). Matches the prototype.
+
+   The tab's original Webflow content (an icon list + an empty details
+   accordion, which also contains the legacy traceability anchor) is hidden
+   here so this owns the whole tab. Nothing is rendered — and nothing is
+   hidden — for products that don't yet have this data, so unmigrated
+   products keep their existing content.
    ------------------------------------------------------------------------- */
 
-function buildTraceability() {
-  const anchor = document.querySelector('#bb-trace-anchor, [data-bb-trace-anchor]');
-  const items = state.pdp.traceability;
-  if (!anchor || !Array.isArray(items) || !items.length) return;
+function findMaterialsPane() {
+  const panel = document.querySelector(SEL.panel);
+  if (!panel) return null;
+  const panes = [...panel.querySelectorAll('.product-header_tab-details')];
+  const links = [...panel.querySelectorAll(SEL.tabLink)];
+  const idx = links.findIndex((l) =>
+    (l.textContent || '').trim().toLowerCase().includes('material')
+  );
+  if (idx >= 0 && panes[idx]) return panes[idx];
+  return panes[2] || null; // tab order: Overview, Customization, Materials, Size & Fit
+}
 
-  const wrap = el('div', 'bb-trace');
-  wrap.append(el('h2', 'bb-panel-heading', 'Traceability'));
-  const ul = el('ul', 'bb-chain');
-  items.forEach((t) => ul.append(el('li', null, t)));
-  wrap.append(ul);
-  anchor.insertAdjacentElement('afterend', wrap);
+function specRow(label, value) {
+  const row = el('div', 'bb-comp-row bb-spec-row');
+  row.append(el('span', 'bb-comp-name', label));
+  row.append(el('span', 'bb-comp-val', value));
+  return row;
+}
+
+function buildMaterials() {
+  const pane = findMaterialsPane();
+  if (!pane) return;
+
+  const mat = state.pdp.materials;
+  const trace = state.pdp.traceability;
+  const hasComposition = mat && Array.isArray(mat.composition) && mat.composition.length;
+  const hasTrace = Array.isArray(trace) && trace.length;
+  if (!mat && !hasTrace) return; // no CMS data — leave the original tab as-is
+
+  // Replace the original Webflow materials/details content with ours.
+  [...pane.children].forEach((child) => {
+    if (!child.classList.contains('bb-tab-header') && !child.classList.contains('bb-materials')) {
+      child.style.display = 'none';
+    }
+  });
+
+  const wrap = el('div', 'bb-materials');
+
+  if (mat && mat.blurb) wrap.append(el('p', 'bb-desc', mat.blurb));
+
+  if (hasComposition || (mat && (mat.weight || mat.yarn))) {
+    wrap.append(el('h2', 'bb-panel-heading', 'Composition'));
+    const list = el('div', 'bb-comp');
+    if (hasComposition) {
+      mat.composition.forEach((c) => {
+        const row = el('div', 'bb-comp-row');
+        const left = el('div', 'bb-comp-left');
+        if (c.icon) {
+          const ic = el('img', 'bb-comp-icon');
+          ic.src = c.icon;
+          ic.alt = '';
+          ic.loading = 'lazy';
+          left.append(ic);
+        }
+        left.append(el('span', 'bb-comp-name', c.name || ''));
+        row.append(left);
+        row.append(el('span', 'bb-comp-val', c.pct || ''));
+        list.append(row);
+      });
+    }
+    if (mat && mat.weight) list.append(specRow('Weight', mat.weight));
+    if (mat && mat.yarn) list.append(specRow('Yarn', mat.yarn));
+    wrap.append(list);
+  }
+
+  if (hasTrace) {
+    wrap.append(el('h2', 'bb-panel-heading', 'Traceability'));
+    const ul = el('ul', 'bb-chain');
+    trace.forEach((t) => ul.append(el('li', null, t)));
+    wrap.append(ul);
+  }
+
+  pane.append(wrap);
 }
 
 /* -------------------------------------------------------------------------
@@ -521,7 +588,7 @@ export default function initPDP() {
 
   buildBreadcrumb();
   buildTabHeaders();
-  buildTraceability();
+  buildMaterials();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();
