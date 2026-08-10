@@ -1,35 +1,29 @@
 /**
  * BioBlanks — PDP behaviour
  *
- * Runs only on product detail pages. It renders the interactive parts of the
- * panel and gallery from CMS data that Webflow prints into the page, so the
- * page still makes ZERO Fourthwall calls to render — price and variant IDs
- * come from the CMS at publish time. The Storefront API is only touched on
- * add-to-cart, via BBCart.
+ * Runs only on product detail pages. It renders the Overview panel and the
+ * gallery from CMS data that Webflow prints into the page, so the page makes
+ * ZERO Fourthwall calls to render — price and variant IDs come from the CMS at
+ * publish time. The Storefront API is only touched on add-to-cart, via BBCart.
  *
  * ---------------------------------------------------------------------------
  * DOM / DATA CONTRACT  (what the Webflow Designer must provide)
  * ---------------------------------------------------------------------------
- * A single element carries the product's colorways as JSON, bound to the
- * product's "Colorways JSON" CMS field:
+ * Two hidden text elements carry JSON, each bound to a Product CMS field so it
+ * resolves per current product (a CMS-bound text node is the only reliable way
+ * to print CMS JSON headlessly — attribute and embed-token bindings don't):
  *
- *   <div data-bb-colorways='[
- *     { "name": "Charcoal", "swatch": "#413f3f",
- *       "variants": { "XS": "<fw-variant-id>", ... },
- *       "gallery":  [ "<image-url>", ... ] },
- *     ...
- *   ]'></div>
+ *   #bb-pdp        -> "PDP JSON" field:
+ *     { title, sku, description, samplePrice,
+ *       productDetails: [ "...", ... ],
+ *       wholesale: { price, unit, note, calcUrl } }
  *
- * Everything else — swatch chips, the colorway label, the size grid, the
- * gallery and its thumbnail rail — is built here from that JSON, so it matches
- * the prototype exactly and stays versioned in this repo. Using one product
- * field (rather than a filtered Collection List) keeps the whole thing
- * headless: "Product = Current" filters can only be set in the Designer UI.
+ *   #bb-colorways  -> "Colorways JSON" field:
+ *     [ { name, swatch, variants: { size: variantId }, gallery: [url] }, ... ]
  *
- * The jobs beyond rendering:
- *   1. Show one action button at a time, based on the active tab
- *   2. Write the selected variant id onto .add-to-cart_button and wire BBCart
- *   3. Keep the thumbnail rail in sync with gallery scroll position
+ * Everything visible in the Overview panel and the gallery is built here from
+ * that JSON, matching the prototype. The page's own Overview content blocks are
+ * hidden in the Designer so this owns the panel.
  */
 
 import BBCart from './cart.js';
@@ -42,27 +36,23 @@ const SEL = {
   addToCart: '.add-to-cart_button',
   projectLink: '.button-navbar',
   galleryColumn: '.product_swiper-left',
+  pdpData: '#bb-pdp, [data-bb-pdp]',
   colorwayData: '#bb-colorways, [data-bb-colorways]',
 };
 
-// Canonical size order. Sizes present in a colorway's variant map render in
-// this order; anything not in the map renders disabled.
 const SIZES = ['XS', 'S', 'M', 'L', 'XL', '2XL'];
 
-/* -------------------------------------------------------------------------
-   State
-   ------------------------------------------------------------------------- */
-
 const state = {
-  colorways: [],   // [{ name, swatch, variants: {size: id}, gallery: [url] }]
+  pdp: {},
+  colorways: [],
   activeColor: 0,
   activeSize: null,
 };
 
-const els = {}; // cached built elements
+const els = {};
 
 /* -------------------------------------------------------------------------
-   Read colorway data printed by the CMS
+   Read CMS-printed JSON
    ------------------------------------------------------------------------- */
 
 function parseJSON(value, fallback) {
@@ -70,22 +60,21 @@ function parseJSON(value, fallback) {
   try {
     return JSON.parse(value);
   } catch (err) {
-    console.warn('[PDP] could not parse colorway data:', err);
+    console.warn('[PDP] could not parse data:', err);
     return fallback;
   }
 }
 
-function readColorways() {
-  const host = document.querySelector(SEL.colorwayData);
-  if (!host) return { host: null, list: [] };
+function readData() {
+  const pdpHost = document.querySelector(SEL.pdpData);
+  const cwHost = document.querySelector(SEL.colorwayData);
+  els.anchor = pdpHost || cwHost;
 
-  // The host is a CMS-bound text element, so its JSON lives in textContent.
-  // Fall back to the attribute in case a future host carries it there instead.
-  const raw = (host.textContent && host.textContent.trim()) ||
-              host.getAttribute('data-bb-colorways') || '';
-  const arr = parseJSON(raw, []);
+  state.pdp = parseJSON(pdpHost && pdpHost.textContent.trim(), {}) || {};
 
-  const list = arr
+  const cwRaw = cwHost && cwHost.textContent.trim();
+  const arr = parseJSON(cwRaw, []) || [];
+  state.colorways = arr
     .map((cw) => ({
       name: (cw.name || '').trim(),
       swatch: (cw.swatch || '').trim(),
@@ -93,57 +82,120 @@ function readColorways() {
       gallery: Array.isArray(cw.gallery) ? cw.gallery : [],
     }))
     .filter((cw) => cw.name);
-
-  return { host, list };
 }
 
 /* -------------------------------------------------------------------------
-   Panel controls — colorway heading + label, swatches, size grid
-   All built inside the data host element, in prototype order.
+   Small DOM helpers
    ------------------------------------------------------------------------- */
 
-function buildPanelControls() {
-  // The data host is a <script type="application/json">, so controls go in a
-  // sibling container inserted right after it (in the Overview tab pane).
-  const host = document.createElement('div');
-  host.className = 'bb-panel-controls';
-  els.dataHost.insertAdjacentElement('afterend', host);
-
-  const colorHeading = document.createElement('h2');
-  colorHeading.className = 'bb-panel-heading';
-  colorHeading.textContent = 'Colorway';
-
-  const colorNote = document.createElement('p');
-  colorNote.className = 'bb-color-note';
-
-  const swatches = document.createElement('div');
-  swatches.className = 'bb-swatches';
-
-  const sizeHeading = document.createElement('h2');
-  sizeHeading.className = 'bb-panel-heading';
-  sizeHeading.textContent = 'Size';
-
-  const sizes = document.createElement('div');
-  sizes.className = 'bb-sizes';
-
-  host.append(colorHeading, colorNote, swatches, sizeHeading, sizes);
-  els.colorNote = colorNote;
-  els.swatches = swatches;
-  els.sizes = sizes;
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
 }
+
+function buildAccordion(title, bodyNode) {
+  const acc = el('div', 'bb-acc');
+  acc.setAttribute('data-bb-acc', '');
+
+  const head = el('button', 'bb-acc-head');
+  head.type = 'button';
+  head.setAttribute('data-bb-acc-head', '');
+  head.setAttribute('aria-expanded', 'false');
+  const sign = el('span', 'bb-acc-sign');
+  sign.setAttribute('aria-hidden', 'true');
+  head.append(sign, el('span', null, title));
+
+  const body = el('div', 'bb-acc-body');
+  body.setAttribute('data-bb-acc-body', '');
+  const inner = el('div', 'bb-acc-inner');
+  inner.append(bodyNode);
+  body.append(inner);
+
+  head.addEventListener('click', () => {
+    const open = !acc.hasAttribute('open');
+    acc.toggleAttribute('open', open);
+    head.setAttribute('aria-expanded', String(open));
+  });
+
+  acc.append(head, body);
+  return acc;
+}
+
+/* -------------------------------------------------------------------------
+   Overview panel — built from the PDP + colorways JSON, in prototype order
+   ------------------------------------------------------------------------- */
+
+function buildPanel() {
+  const pdp = state.pdp;
+  const host = el('div', 'bb-panel-controls');
+  els.anchor.insertAdjacentElement('afterend', host);
+
+  // Title + price
+  const titleRow = el('div', 'bb-title-row');
+  titleRow.append(el('h1', 'bb-title', pdp.title || ''));
+  if (pdp.samplePrice) titleRow.append(el('div', 'bb-price', pdp.samplePrice));
+  host.append(titleRow);
+
+  if (pdp.sku) host.append(el('p', 'bb-sku', pdp.sku));
+  if (pdp.description) host.append(el('p', 'bb-desc', pdp.description));
+
+  // Product Details accordion
+  if (Array.isArray(pdp.productDetails) && pdp.productDetails.length) {
+    const ul = el('ul', 'bb-bullets');
+    pdp.productDetails.forEach((b) => ul.append(el('li', null, b)));
+    host.append(buildAccordion('Product Details', ul));
+  }
+
+  // Wholesale Pricing accordion
+  if (pdp.wholesale) {
+    const w = pdp.wholesale;
+    const body = el('div');
+    const line = el('div', 'bb-price-line');
+    line.append(el('span', null, `Starting at ${w.price || ''} ${w.unit || ''}`.trim()));
+    if (w.calcUrl) {
+      const a = el('a', 'bb-link', 'Pricing calculator');
+      a.href = w.calcUrl;
+      line.append(a);
+    }
+    body.append(line);
+    if (w.note) body.append(el('p', 'bb-note', w.note));
+    host.append(buildAccordion('Wholesale Pricing', body));
+  }
+
+  // Colorway
+  host.append(el('h2', 'bb-panel-heading', 'Colorway'));
+  els.colorNote = el('p', 'bb-color-note', '');
+  host.append(els.colorNote);
+  els.swatches = el('div', 'bb-swatches');
+  host.append(els.swatches);
+
+  // Size
+  host.append(el('h2', 'bb-panel-heading', 'Size'));
+  els.sizes = el('div', 'bb-sizes');
+  host.append(els.sizes);
+}
+
+/* -------------------------------------------------------------------------
+   Swatches (image thumbnails) + size grid
+   ------------------------------------------------------------------------- */
 
 function renderSwatches() {
   const wrap = els.swatches;
   wrap.innerHTML = '';
   state.colorways.forEach((cw, i) => {
-    const chip = document.createElement('button');
+    const chip = el('button', 'bb-swatch');
     chip.type = 'button';
-    chip.className = 'bb-swatch';
-    chip.style.setProperty('--bb-swatch-color', cw.swatch || 'transparent');
     chip.setAttribute('aria-label', cw.name);
     chip.setAttribute('aria-pressed', String(i === state.activeColor));
+    const img = el('img');
+    img.src = cw.gallery[0] || '';
+    img.alt = '';
+    img.loading = 'lazy';
+    chip.append(img);
     chip.addEventListener('click', () => selectColorway(i));
-    wrap.appendChild(chip);
+    wrap.append(chip);
   });
 }
 
@@ -160,13 +212,10 @@ function renderSizes() {
   const grid = els.sizes;
   const cw = state.colorways[state.activeColor];
   grid.innerHTML = '';
-
   SIZES.forEach((size) => {
     const variantId = cw?.variants?.[size];
-    const btn = document.createElement('button');
+    const btn = el('button', 'bb-size', size);
     btn.type = 'button';
-    btn.className = 'bb-size';
-    btn.textContent = size;
     btn.disabled = !variantId;
     btn.setAttribute('aria-pressed', String(state.activeSize === size));
     if (variantId) {
@@ -176,70 +225,57 @@ function renderSizes() {
         syncBuyButton();
       });
     }
-    grid.appendChild(btn);
+    grid.append(btn);
   });
 }
 
 /* -------------------------------------------------------------------------
-   Gallery
-   We own the gallery so it can swap per colorway. The native Webflow swiper
-   gallery is hidden (kept in the DOM as a no-JS / crawler fallback).
+   Gallery — JS-owned vertical stack + thumbnail rail, swaps per colorway
    ------------------------------------------------------------------------- */
 
 function buildGallery() {
   const column = document.querySelector(SEL.galleryColumn);
   if (!column) return;
-
   column.classList.add('bb-js-gallery');
 
-  const rail = document.createElement('div');
-  rail.className = 'bb-thumb-rail';
-  const thumbs = document.createElement('div');
-  thumbs.className = 'bb-thumbs';
-  rail.appendChild(thumbs);
+  const rail = el('div', 'bb-thumb-rail');
+  els.thumbs = el('div', 'bb-thumbs');
+  rail.append(els.thumbs);
 
-  const shots = document.createElement('div');
-  shots.className = 'bb-shots';
-
+  els.shots = el('div', 'bb-shots');
   column.insertBefore(rail, column.firstChild);
-  column.appendChild(shots);
-
-  els.thumbs = thumbs;
-  els.shots = shots;
+  column.append(els.shots);
 }
 
 function renderGallery() {
   if (!els.shots) return;
   const cw = state.colorways[state.activeColor];
   const images = cw?.gallery || [];
-
   els.shots.innerHTML = '';
   els.thumbs.innerHTML = '';
 
   images.forEach((src, i) => {
-    const shot = document.createElement('div');
-    shot.className = 'bb-shot';
-    const img = document.createElement('img');
+    const shot = el('div', 'bb-shot');
+    const img = el('img');
     img.src = src;
     img.alt = `${cw.name} view ${i + 1}`;
     img.loading = i === 0 ? 'eager' : 'lazy';
     img.decoding = 'async';
-    shot.appendChild(img);
-    els.shots.appendChild(shot);
+    shot.append(img);
+    els.shots.append(shot);
 
-    const thumb = document.createElement('button');
+    const thumb = el('button', 'bb-thumb');
     thumb.type = 'button';
-    thumb.className = 'bb-thumb';
     thumb.setAttribute('aria-label', `View image ${i + 1}`);
     thumb.setAttribute('aria-current', i === 0 ? 'true' : 'false');
-    const timg = document.createElement('img');
+    const timg = el('img');
     timg.src = src;
     timg.alt = '';
-    thumb.appendChild(timg);
+    thumb.append(timg);
     thumb.addEventListener('click', () =>
       shot.scrollIntoView({ behavior: 'smooth', block: 'center' })
     );
-    els.thumbs.appendChild(thumb);
+    els.thumbs.append(thumb);
   });
 
   observeShots();
@@ -252,7 +288,6 @@ function observeShots() {
   const shots = [...els.shots.querySelectorAll('.bb-shot')];
   const thumbs = [...els.thumbs.querySelectorAll('.bb-thumb')];
   if (!shots.length) return;
-
   shotObserver = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
@@ -285,10 +320,8 @@ function selectColorway(i) {
 function syncBuyButton() {
   const button = document.querySelector(SEL.addToCart);
   if (!button) return;
-
   const cw = state.colorways[state.activeColor];
   const variantId = state.activeSize ? cw?.variants?.[state.activeSize] : null;
-
   if (variantId) {
     button.dataset.variantId = variantId;
     button.removeAttribute('disabled');
@@ -305,15 +338,11 @@ function syncBuyButton() {
 function wireAddToCart() {
   const button = document.querySelector(SEL.addToCart);
   if (!button) return;
-
-  // Defensive: strip Storesynk's hook if the attribute lingers.
   button.removeAttribute('sf-add-to-cart');
-
   button.addEventListener('click', async (event) => {
     event.preventDefault();
     const variantId = button.dataset.variantId;
     if (!variantId) return;
-
     button.setAttribute('disabled', 'true');
     button.classList.add('is-loading');
     try {
@@ -322,15 +351,13 @@ function wireAddToCart() {
       console.error('[PDP] add to cart failed:', err);
     } finally {
       button.classList.remove('is-loading');
-      syncBuyButton(); // re-enable only if a valid selection remains
+      syncBuyButton();
     }
   });
 }
 
 /* -------------------------------------------------------------------------
    Action buttons — one visible per tab
-   Overview / Materials / Size & Fit -> Add to Cart
-   Customization                     -> Start New Project (Typeform)
    ------------------------------------------------------------------------- */
 
 function tabName(link) {
@@ -341,11 +368,9 @@ function tabName(link) {
 function syncActionButtons() {
   const current = document.querySelector(`${SEL.tabLink}.w--current`);
   if (!current) return;
-
   const isCustomization = tabName(current).includes('custom');
   const cart = document.querySelector(SEL.addToCart);
   const project = document.querySelector(SEL.projectLink);
-
   if (cart) cart.setAttribute('data-bb-hidden', String(isCustomization));
   if (project) project.setAttribute('data-bb-hidden', String(!isCustomization));
 }
@@ -353,30 +378,11 @@ function syncActionButtons() {
 function watchTabs() {
   const menu = document.querySelector(SEL.tabsMenu);
   if (!menu) return;
-
   const observer = new MutationObserver(syncActionButtons);
   menu.querySelectorAll(SEL.tabLink).forEach((link) => {
     observer.observe(link, { attributes: true, attributeFilter: ['class'] });
   });
   syncActionButtons();
-}
-
-/* -------------------------------------------------------------------------
-   Accordions
-   Generic support for any element the Designer marks with [data-bb-acc].
-   Bodies animate via grid-template-rows 0fr -> 1fr (see pdp.css).
-   ------------------------------------------------------------------------- */
-
-function wireAccordions() {
-  document.querySelectorAll('[data-bb-acc]').forEach((acc) => {
-    const head = acc.querySelector('[data-bb-acc-head]');
-    if (!head) return;
-    head.addEventListener('click', () => {
-      const open = !acc.hasAttribute('open');
-      acc.toggleAttribute('open', open);
-      head.setAttribute('aria-expanded', String(open));
-    });
-  });
 }
 
 /* -------------------------------------------------------------------------
@@ -387,15 +393,12 @@ export default function initPDP() {
   if (!document.querySelector(SEL.panel)) return; // not a PDP
 
   watchTabs();
-  wireAccordions();
   wireAddToCart();
 
-  const { host, list } = readColorways();
-  state.colorways = list;
+  readData();
 
-  if (host && list.length) {
-    els.dataHost = host;
-    buildPanelControls();
+  if (els.anchor && state.colorways.length) {
+    buildPanel();
     renderSwatches();
     buildGallery();
     syncSwatches();
@@ -403,12 +406,12 @@ export default function initPDP() {
     renderGallery();
     syncBuyButton();
   } else {
-    console.warn('[PDP] no [data-bb-colorways] data found — panel controls not built.');
+    console.warn('[PDP] no colorway data found — panel not built.');
   }
 
   BBCart.on('cartUpdate', () => {
-    document.querySelectorAll('[data-bb-cart-count]').forEach((el) => {
-      el.textContent = BBCart.itemCount();
+    document.querySelectorAll('[data-bb-cart-count]').forEach((node) => {
+      node.textContent = BBCart.itemCount();
     });
   });
 }
