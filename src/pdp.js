@@ -355,6 +355,94 @@ function buildSizeFit() {
 }
 
 /* -------------------------------------------------------------------------
+   Customization tab — intro, "How to Get Started" steps, "Mockup Templates"
+   download/copy links (Figma / Photoshop / Illustrator) and minimums. Rendered
+   from CMS (pdp-json.customization); the original Webflow content is hidden.
+   ------------------------------------------------------------------------- */
+
+// Inline brand marks so the template links need no external assets (CSP-safe).
+const TPL_ICONS = {
+  figma:
+    '<svg viewBox="0 0 38 57" aria-hidden="true">' +
+    '<path fill="#1abcfe" d="M19 28.5a9.5 9.5 0 1 1 19 0 9.5 9.5 0 0 1-19 0z"/>' +
+    '<path fill="#0acf83" d="M0 47.5A9.5 9.5 0 0 1 9.5 38H19v9.5a9.5 9.5 0 1 1-19 0z"/>' +
+    '<path fill="#ff7262" d="M19 0v19h9.5a9.5 9.5 0 1 0 0-19H19z"/>' +
+    '<path fill="#f24e1e" d="M0 9.5A9.5 9.5 0 0 0 9.5 19H19V0H9.5A9.5 9.5 0 0 0 0 9.5z"/>' +
+    '<path fill="#a259ff" d="M0 28.5A9.5 9.5 0 0 0 9.5 38H19V19H9.5A9.5 9.5 0 0 0 0 28.5z"/>' +
+    '</svg>',
+  photoshop:
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<rect width="24" height="24" rx="4" fill="#001E36"/>' +
+    '<text x="12" y="16.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="11" fill="#31A8FF">Ps</text>' +
+    '</svg>',
+  illustrator:
+    '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+    '<rect width="24" height="24" rx="4" fill="#330000"/>' +
+    '<text x="12" y="16.5" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="700" font-size="11" fill="#FF9A00">Ai</text>' +
+    '</svg>',
+};
+
+function findCustomizationPane() {
+  const panel = document.querySelector(SEL.panel);
+  if (!panel) return null;
+  const panes = [...panel.querySelectorAll('.product-header_tab-details')];
+  const links = [...panel.querySelectorAll(SEL.tabLink)];
+  const idx = links.findIndex((l) => /custom/i.test(l.textContent || ''));
+  if (idx >= 0 && panes[idx]) return panes[idx];
+  return panes[1] || null; // tab order: Overview, Customization, Materials, Size & Fit
+}
+
+function buildCustomization() {
+  const c = state.pdp.customization;
+  if (!c) return;
+  const pane = findCustomizationPane();
+  if (!pane) return;
+
+  // Replace the original Webflow customization content with ours.
+  [...pane.children].forEach((child) => {
+    if (!child.classList.contains('bb-tab-header') && !child.classList.contains('bb-custom')) {
+      child.style.display = 'none';
+    }
+  });
+
+  const wrap = el('div', 'bb-custom');
+
+  if (c.blurb) wrap.append(el('p', 'bb-desc', c.blurb));
+
+  if (Array.isArray(c.steps) && c.steps.length) {
+    wrap.append(el('h2', 'bb-panel-heading', 'How to Get Started'));
+    const ol = el('ol', 'bb-steps');
+    c.steps.forEach((s) => ol.append(el('li', null, s)));
+    wrap.append(ol);
+  }
+
+  if (Array.isArray(c.templates) && c.templates.length) {
+    wrap.append(el('h2', 'bb-panel-heading', 'Mockup Templates'));
+    const list = el('div', 'bb-templates');
+    c.templates.forEach((t) => {
+      const a = el('a', 'bb-tpl');
+      a.href = t.url || '#';
+      if (t.url && t.url !== '#') {
+        a.target = '_blank';
+        a.rel = 'noopener';
+      }
+      const icon = el('span', 'bb-tpl-icon');
+      icon.innerHTML = TPL_ICONS[t.type] || '';
+      a.append(icon, el('span', 'bb-tpl-label', t.label || t.type || ''));
+      list.append(a);
+    });
+    wrap.append(list);
+  }
+
+  if (c.minimums) {
+    wrap.append(el('h2', 'bb-panel-heading', 'Minimums'));
+    wrap.append(el('p', 'bb-desc', c.minimums));
+  }
+
+  pane.append(wrap);
+}
+
+/* -------------------------------------------------------------------------
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
@@ -657,6 +745,7 @@ export default function initPDP() {
 
   buildBreadcrumb();
   buildTabHeaders();
+  buildCustomization();
   buildMaterials();
   buildSizeFit();
 
