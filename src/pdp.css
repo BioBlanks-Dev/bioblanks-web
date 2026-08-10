@@ -137,8 +137,11 @@
     display: flex;
     flex-direction: column;
     /* Right padding matches the top-right nav cluster (.container-rigth-navbar
-       is right: 2.5rem) so the panel's content edge aligns with the nav. */
-    padding: 82px 2.5rem 22px 44px;
+       is right: 2.5rem) so the panel's content edge aligns with the nav.
+       Top padding (92px) aligns the breadcrumb with the first gallery
+       thumbnail (--bb-rail-top: 92px); everything else flows after the
+       breadcrumb, so in-panel spacing is unchanged. */
+    padding: 92px 2.5rem 22px 44px;
   }
 
   .product-header_tabs {
