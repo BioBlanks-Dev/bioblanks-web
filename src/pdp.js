@@ -428,10 +428,18 @@ function tabName(link) {
   return (label.textContent || '').trim().toLowerCase();
 }
 
-function syncActionButtons() {
-  const current = document.querySelector(`${SEL.tabLink}.w--current`);
-  if (!current) return;
-  const isCustomization = tabName(current).includes('custom');
+function syncActionButtons(activeLink) {
+  // Prefer the explicitly clicked tab, then Webflow's current tab, then the
+  // first tab (Overview) — so the initial state is correct even before
+  // Webflow finishes setting .w--current.
+  const panel = document.querySelector(SEL.panel);
+  const link =
+    activeLink ||
+    (panel && panel.querySelector(`${SEL.tabLink}.w--current`)) ||
+    document.querySelector(`${SEL.tabLink}.w--current`) ||
+    (panel && panel.querySelector(SEL.tabLink));
+  const isCustomization = link ? tabName(link).includes('custom') : false;
+
   const cart = document.querySelector(SEL.addToCart);
   const project = document.querySelector(SEL.projectLink);
   if (cart) cart.setAttribute('data-bb-hidden', String(isCustomization));
@@ -439,13 +447,26 @@ function syncActionButtons() {
 }
 
 function watchTabs() {
-  const menu = document.querySelector(SEL.tabsMenu);
+  const panel = document.querySelector(SEL.panel);
+  const menu = (panel && panel.querySelector(SEL.tabsMenu)) ||
+               document.querySelector(SEL.tabsMenu);
   if (!menu) return;
-  const observer = new MutationObserver(syncActionButtons);
+
   menu.querySelectorAll(SEL.tabLink).forEach((link) => {
-    observer.observe(link, { attributes: true, attributeFilter: ['class'] });
+    // Read the clicked tab directly — no dependence on .w--current timing.
+    link.addEventListener('click', () => {
+      syncActionButtons(link);
+      requestAnimationFrame(() => syncActionButtons(link));
+    });
+    // Backup for programmatic tab changes.
+    new MutationObserver(() => syncActionButtons()).observe(link, {
+      attributes: true,
+      attributeFilter: ['class'],
+    });
   });
+
   syncActionButtons();
+  requestAnimationFrame(() => syncActionButtons());
 }
 
 /* -------------------------------------------------------------------------
