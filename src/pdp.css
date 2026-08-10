@@ -269,6 +269,37 @@
 /* Per-tab header (title + SKU) on the non-Overview tabs */
 .bb-tab-header { margin: 0 0 22px; }
 
+/* Traceability chain — small green dots joined by a thin line (prototype) */
+.bb-trace { margin-top: 22px; }
+.bb-chain { list-style: none; margin: 0; padding: 0; }
+.bb-chain li {
+  position: relative;
+  padding-left: 18px;
+  margin: 7px 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--bb-ink-soft);
+}
+.bb-chain li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #74f081;
+}
+.bb-chain li:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 2.5px;
+  top: calc(.55em + 8px);
+  width: 1px;
+  height: calc(100% - 1px);
+  background: var(--bb-line);
+}
+
 /* Title + sample price */
 .bb-title-row {
   display: flex;

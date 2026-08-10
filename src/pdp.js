@@ -221,6 +221,26 @@ function buildTabHeaders() {
 }
 
 /* -------------------------------------------------------------------------
+   Traceability chain (Materials tab) — matches the prototype's .chain.
+   Rebuilt from CMS so it isn't tied to the Webflow list's dot/line styling.
+   The original block is marked [data-bb-trace-anchor] and hidden in the
+   Designer; the rebuilt chain drops in right after it.
+   ------------------------------------------------------------------------- */
+
+function buildTraceability() {
+  const anchor = document.querySelector('[data-bb-trace-anchor]');
+  const items = state.pdp.traceability;
+  if (!anchor || !Array.isArray(items) || !items.length) return;
+
+  const wrap = el('div', 'bb-trace');
+  wrap.append(el('h2', 'bb-panel-heading', 'Traceability'));
+  const ul = el('ul', 'bb-chain');
+  items.forEach((t) => ul.append(el('li', null, t)));
+  wrap.append(ul);
+  anchor.insertAdjacentElement('afterend', wrap);
+}
+
+/* -------------------------------------------------------------------------
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
@@ -442,6 +462,7 @@ export default function initPDP() {
 
   buildBreadcrumb();
   buildTabHeaders();
+  buildTraceability();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();
