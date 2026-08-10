@@ -178,6 +178,28 @@ function buildPanel() {
 }
 
 /* -------------------------------------------------------------------------
+   Breadcrumb — placed above the tabs inside the panel (prototype layout)
+   ------------------------------------------------------------------------- */
+
+function buildBreadcrumb() {
+  const bc = state.pdp.breadcrumb;
+  const panel = document.querySelector(SEL.panel);
+  if (!bc || !panel) return;
+  const tabs = panel.querySelector('.product-header_tabs');
+  if (!tabs) return;
+
+  const nav = el('p', 'bb-breadcrumb');
+  if (bc.category) {
+    const a = el('a', 'bb-breadcrumb-link', bc.category);
+    a.href = bc.categoryUrl || '#';
+    nav.append(a);
+    nav.append(el('span', 'bb-breadcrumb-sep', ' • '));
+  }
+  nav.append(el('span', 'bb-breadcrumb-current', state.pdp.title || ''));
+  panel.insertBefore(nav, tabs);
+}
+
+/* -------------------------------------------------------------------------
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
@@ -396,6 +418,8 @@ export default function initPDP() {
   wireAddToCart();
 
   readData();
+
+  buildBreadcrumb();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();

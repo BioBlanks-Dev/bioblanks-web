@@ -39,6 +39,24 @@
   }
 
   .padding-section-product { padding-top: 0; padding-bottom: 0; }
+
+  /* Full-bleed: drop the site's horizontal gutter for the PDP header only
+     (scoped via :has so other sections keep their padding). */
+  .padding-global:has(.product-header_component),
+  .padding-section-product:has(.product-header_component) {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+  }
+
+  /* Gallery is a natural-height vertical stack that scrolls with the page
+     while the panel stays sticky — clear any inherited height/overflow cap. */
+  .slider-product_component { height: auto !important; overflow: visible !important; }
+  .product_swiper-left.bb-js-gallery {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .bb-shots { height: auto !important; overflow: visible !important; }
 }
 
 /* --------------------------------------------------------------------------
@@ -229,6 +247,20 @@
 #bb-pdp,
 [data-bb-colorways],
 [data-bb-pdp] { display: none !important; }
+
+/* Breadcrumb above the tabs (prototype layout) */
+.bb-breadcrumb {
+  flex-shrink: 0;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--bb-ink-soft);
+  margin: 0 0 16px;
+}
+.bb-breadcrumb-link { color: inherit; text-decoration: none; opacity: .6; transition: opacity .2s ease; }
+.bb-breadcrumb-link:hover { opacity: 1; }
+.bb-breadcrumb-sep { opacity: .5; }
 
 /* Title + sample price */
 .bb-title-row {
