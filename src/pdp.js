@@ -42,7 +42,7 @@ const SEL = {
   addToCart: '.add-to-cart_button',
   projectLink: '.button-navbar',
   galleryColumn: '.product_swiper-left',
-  colorwayData: '[data-bb-colorways]',
+  colorwayData: '#bb-colorways, [data-bb-colorways]',
 };
 
 // Canonical size order. Sizes present in a colorway's variant map render in
@@ -79,7 +79,10 @@ function readColorways() {
   const host = document.querySelector(SEL.colorwayData);
   if (!host) return { host: null, list: [] };
 
-  const raw = host.getAttribute('data-bb-colorways') || host.textContent;
+  // The host is a CMS-bound text element, so its JSON lives in textContent.
+  // Fall back to the attribute in case a future host carries it there instead.
+  const raw = (host.textContent && host.textContent.trim()) ||
+              host.getAttribute('data-bb-colorways') || '';
   const arr = parseJSON(raw, []);
 
   const list = arr

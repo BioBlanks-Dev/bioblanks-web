@@ -223,6 +223,11 @@
    5. Colorway swatches + size grid (built by pdp.js)
    -------------------------------------------------------------------------- */
 
+/* The CMS-bound colorways data host is JSON, never shown. Hidden via CSS
+   (not Webflow's "hidden", which suppresses the bound text from the DOM). */
+#bb-colorways,
+[data-bb-colorways] { display: none !important; }
+
 .bb-panel-heading {
   font-size: 12px;
   font-weight: 500;
