@@ -308,6 +308,13 @@ function buildGallery() {
   els.shots = el('div', 'bb-shots');
   column.insertBefore(rail, column.firstChild);
   column.append(els.shots);
+
+  // The gallery grows the page after Lenis/ScrollTrigger have cached the
+  // document height, so nudge them to re-measure a few times as late assets
+  // (fonts, lazy images) settle. window 'load' may already have fired by the
+  // time this module runs, so schedule the nudges unconditionally.
+  [200, 600, 1200].forEach((t) => setTimeout(recomputeScroll, t));
+  window.addEventListener('load', recomputeScroll, { once: true });
 }
 
 function renderGallery() {
