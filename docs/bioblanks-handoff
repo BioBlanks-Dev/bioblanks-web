@@ -1,0 +1,353 @@
+# BioBlanks — PDP rebuild + Fourthwall headless
+
+Handoff for continuing in Claude Code. Everything below is verified against
+the live site and API unless marked otherwise.
+
+---
+
+## 1. What this project is
+
+BioBlanks sells blank garments wholesale. The Webflow site is the marketing
+and catalog layer; **Fourthwall** is the commerce backend for **sample orders
+only**.
+
+Two prices, two flows, never confuse them:
+
+| | Price | Flow |
+|---|---|---|
+| **Sample** | $30.00 | Fourthwall cart → hosted checkout |
+| **Wholesale** | $8.35 / unit | Typeform ("Start New Project"), no cart |
+
+We are migrating off **Shopify + Shopyflow/Storesynk**, which has been
+uninstalled. Its cart drawer was injected at runtime and is now gone —
+a replacement has to be built in the Designer from scratch.
+
+---
+
+## 2. Architecture
+
+Three tiers. Fourthwall's variant granularity (colour × size) is finer than
+the image granularity (colour only) — that mismatch is why the Colorway tier
+exists.
+
+| Tier | Lives in | Count | Holds |
+|---|---|---|---|
+| Product | Webflow `Product Catalogs` | 22 | Spec, copy, traceability, SEO |
+| Colorway | Webflow `Colorways` | ~66 | Image set, swatch, size→variant map |
+| Variant | Fourthwall | ~400 | UUID, price, stock |
+
+**The PDP makes zero Fourthwall calls to render.** Price and stock come from
+the CMS at publish time; the Storefront API is only hit on add-to-cart.
+
+Fourthwall's product model has **no metafields** and variant `attributes` is a
+fixed shape — `color` (name + hex) and `size` (name), nothing else. All spec
+data therefore stays in Webflow. This is a hard constraint, not a preference.
+
+---
+
+## 3. Access + identifiers
+
+### Webflow
+
+```
+site        BioBlanks Website (Claude)
+site_id     6a29b993bf683f18b385dad0
+shortName   bioblanks-shopify-15a59823bcc6d7234cdd9
+staging     https://bioblanks-shopify-15a59823bcc6d7234cdd9.webflow.io
+```
+
+This is a **sandbox clone** of production (cloned 2026-06-10), no custom
+domain. Safe to break.
+
+| Page | id | Slug | Publishes to |
+|---|---|---|---|
+| Product Catalogs Template | `6a29b993bf683f18b385dac0` | `detail_products` | `/products/{slug}` |
+
+| Collection | id | Items | Status |
+|---|---|---|---|
+| Product Catalogs | `6a29b993bf683f18b385dca5` | 22 | Live |
+| Colorways | `6a78c80ada9d495fcd3db5cd` | 2 | New, images not uploaded |
+| Products | `6a29b993bf683f18b385dbcf` | 0 | Dead relic |
+| SKUs | `6a29b993bf683f18b385dbe6` | — | Dead relic |
+| Categories | `6a29b993bf683f18b385dbb8` | — | Dead relic |
+
+The three relics are native Ecommerce collections from an abandoned first
+attempt. Ecommerce is disabled but Webflow won't release the collections or
+the `/checkout`, `/paypal-checkout`, `/order-confirmation` pages. Harmless.
+
+### Fourthwall
+
+```
+storefront token   ptkn_15531f83-e03e-46c2-8459-518d1e542bf0   (publishable)
+API base           https://storefront-api.fourthwall.com/v1
+checkout           https://checkout.bioblanks.com/checkout/?cartCurrency=USD&cartId={id}
+test product id    aa50c7f8-3e0d-4296-b18e-a356acefc71c
+```
+
+Confirmed working end to end: cart create → add → redirect → correct line
+items on the hosted checkout.
+
+**Verified cart response shape** — `items[0]` returns the whole nested
+`variant` object (attributes, id, sku, stock, unitPrice, images) plus the
+parent `product`. A cart drawer can render straight from the API with no
+local state.
+
+### Repo
+
+```
+github.com/BioBlanks-Dev/bioblanks-web
+src/main.js    entry point, exposes window.BBCart, loads pdp.css
+src/cart.js    Fourthwall cart module
+src/pdp.js     PDP behaviour
+src/pdp.css    PDP layout
+```
+
+Current release: **v0.3.0**
+
+Loaded by a Webflow registered script `BioBlanksGitHubLoader` (site footer),
+which is a one-liner:
+
+```js
+import('https://cdn.jsdelivr.net/gh/BioBlanks-Dev/bioblanks-web@v0.3.0/src/main.js')
+  .catch(e => console.error('BioBlanks module failed to load:', e));
+```
+
+`main.js` resolves `pdp.css` via `import.meta.url`, so the stylesheet always
+matches the JS version.
+
+**Deploy loop:** commit → `git tag vX.Y.Z` → push → register a new loader
+version in Webflow pointing at the tag → publish. Never use `@main` — jsDelivr
+caches it for 12h and it cost us an hour.
+
+---
+
+## 4. Webflow DOM contract
+
+Everything the code targets. Verified via the Webflow MCP element tools.
+
+### Page structure
+
+```
+main-wrapper
+└── product_container
+    ├── section_product-header          ← our work
+    │   ├── padding-global
+    │   │   └── padding-section-product
+    │   │       └── Grid .product-header_component
+    │   │           ├── .slider-product_component     (gallery)
+    │   │           │   └── .product_swiper-left
+    │   │           │       └── CollectionList .swiper.is-slider
+    │   │           │           └── .swiper-wrapper.is-slider
+    │   │           │               └── .swiper-slide.is-slider
+    │   │           └── .product-header_content-inner-wrapper   (panel)
+    │   ├── TabsWrapper .product-header_tabs.is-mobile
+    │   └── .product_button-wrap → Typeform link
+    ├── section_product-description  (#how-it-works)   ← DO NOT TOUCH
+    └── section_product-other                          ← DO NOT TOUCH
+```
+
+### Panel internals
+
+```
+.product-header_content-inner-wrapper
+├── .h1-product                      title
+├── .text-type.4                     SKU
+├── .text-description-product-mobile description
+├── .details-price-mobile            pricing
+├── TabsWrapper .product-header_tabs
+│   ├── .product-header_tabs-menu
+│   │   └── 4× TabsLink .product-header_tab-link
+│   │       ├── div .element-decorate    ← the dot
+│   │       └── div .text-tabs → label
+│   └── .product-header_tabs-content
+│       └── 4× TabsPane .product-header_tab-details
+├── .product-actions_wrap
+│   ├── FormWrapper .variant_selector → form#option-selector-form
+│   ├── .variant-selector_wrapper
+│   │   ├── .variant-selector_button
+│   │   └── .variant-options-wrap → .variants-options_wrapper
+│   ├── button .select-variant_button
+│   ├── button .add-to-cart_button       ← wire to BBCart
+│   └── Link .button-navbar → Typeform
+└── HtmlEmbed  (was `animation-tabs`, now emptied)
+```
+
+Tab order: Overview, Customization, Materials, Size & Fit.
+
+---
+
+## 5. Target PDP layout
+
+Working prototype: `bioblanks-pdp-prototype.html` (open in a browser, uses
+real product images from the Webflow CDN and real Fourthwall variant IDs).
+
+### Layout
+
+- 50/50 split, gallery left, panel right
+- Gallery runs full-bleed to the top of the viewport; floating chrome overlays it
+- Each shot `width: 100%`, `aspect-ratio: 4/5`, `object-fit: cover` — no visible background
+- Thumbnail rail overlays the top-left of the gallery in a **zero-height sticky wrapper** so it takes no layout space
+- Panel is sticky, `height: 100vh`, flex column: breadcrumb → tabs → scrolling content → docked button
+
+### Type scale
+
+| Element | Size |
+|---|---|
+| Product title | 24px |
+| Price (beside title, right-aligned, baseline) | 24px |
+| Body, section headers | 12px |
+| Breadcrumb | 10px uppercase, `letter-spacing: .12em` |
+
+### Thumbnails (gallery + colorway swatches, identical)
+
+- No padding, no border, no background
+- `border-radius: 4px` via `--thumb-radius`
+- Inactive `opacity: .38`, hover `.7`, active `1`, 250ms
+
+### Tabs
+
+- Flat labels, 26px gap, no pill, no divider line
+- Gold dot (`#FFD700`) left of the active label
+- Soft gold glow beneath the active label: `height: 2.5px`, `blur(6px)`, `opacity: .42`, `bottom: 6px`
+- Active text `#333332`, inactive `#A3A39D`
+
+Note: the catalog page uses gold `#FFD700`; the old PDP used green
+`rgba(116,240,129,.30)`. **Gold is the decision** for the PDP.
+
+### Overview tab order
+
+1. Title + price
+2. SKU
+3. Description (full panel width)
+4. **Product Details** — collapsible, starts closed
+5. **Wholesale Pricing** — collapsible, starts closed
+6. Colorway swatches
+7. Size selector (XS–2XL, 6-across grid)
+
+Accordion icon is a `+` built from two 8px bars; the vertical bar rotates 90°
+and fades to become `−`. Bodies animate via `grid-template-rows: 0fr → 1fr`
+with `overflow: hidden` — no hardcoded heights.
+
+### Buttons
+
+One visible at a time, driven by the active tab:
+
+- Overview / Materials / Size & Fit → **Add to Cart**
+- Customization → **Start New Project**
+
+`Add to Cart` is disabled until a size is selected. No helper text.
+
+### Breadcrumb
+
+`TEES • WOMEN'S CLASSIC TEE` — category and item only, no "Catalog" level.
+Sits above the tabs inside the panel. Category links to
+`/product-catalog?category={slug}`.
+
+---
+
+## 6. Done
+
+- [x] Fourthwall shop, test product, variant model verified
+- [x] Cart round-trip proven: create → add → checkout with correct line items
+- [x] `checkout.bioblanks.com` subdomain connected
+- [x] Storesynk uninstalled; site custom code audited
+- [x] `Colorways` collection created with schema
+- [x] Two Colorway items populated with real variant maps
+- [x] Fourthwall fields added to `Product Catalogs`
+- [x] Repo + jsDelivr pipeline working, pinned to tags
+- [x] `cart.js`, `pdp.js`, `pdp.css` written and loading
+- [x] Gallery nav arrows and counter removed
+- [x] `animation-tabs` embed emptied, tab styling moved to `pdp.css`
+- [x] Gallery flattened to vertical stack
+
+---
+
+## 7. Outstanding
+
+### Immediate
+
+1. **Remove the gallery Swiper init** from PDP page footer code. It still runs
+   against a wrapper the CSS has flattened.
+   **`.swiper.is-catalog` in `section_product-other` must survive** — that's
+   related products, in a section we don't touch.
+
+2. **Fix `Uncaught ReferenceError: Shopyflow is not defined`** at
+   `womens-classic-tee:2780`. Page-level variant selector calls
+   `Shopyflow.on('cartUpdate', ...)`. Replace with `BBCart.on('cartUpdate', ...)`
+   — the event API was deliberately shaped to match.
+
+3. **Thumbnail rail** — duplicate the gallery Collection List in the Designer,
+   class the wrapper `.product_thumb-rail`. CSS is already written.
+   *Collection List bindings are Designer-only; the API cannot do this.*
+
+4. **Remove `sf-show-price="1"`** from `.product_text-price`.
+
+### Then
+
+5. Upload Charcoal and Ecru images to the Colorway items
+6. Build colorway swatches + size selector into the panel
+7. Wire size selection to write `data-variant-id` onto `.add-to-cart_button`
+   — `wireAddToCart()` already reads it
+8. Build the cart drawer (nothing exists; Storesynk injected it)
+9. Build the two accordions in the Designer
+
+### Before launch
+
+10. Fourthwall: product is **HIDDEN**, needs publishing
+11. Fourthwall: Charcoal has no variant images; Ecru uses the wrong one
+12. Fourthwall: returns copy is print-on-demand boilerplate ("made to order",
+    "print error") — wrong for manufactured garments, customer-facing at checkout
+13. Fourthwall: Ecru is 0 stock in all sizes
+14. Sync script for the other 21 products
+15. `meta-description` is **null on all 22 items** — template binds to it
+16. Slug `wide-jogger-sweatpants-copia` is a live URL on an item named
+    "Wide Relaxed Sweatpants"
+17. **No analytics of any kind** — no GA, GTM, or pixel, at any level.
+    Checkout crosses to `checkout.bioblanks.com`, so configure tracking in the
+    Fourthwall dashboard rather than duplicating client-side.
+18. Port remaining Slater files, then remove the Slater loader
+19. Production cutover: export URL inventory, repeat, verify no PDP URLs changed
+
+---
+
+## 8. Gotchas
+
+**jsDelivr `@main` caches for 12 hours.** Always deploy from tags.
+
+**Webflow Designer class styles beat single-class selectors.** Tab rules need
+`.product-header_tabs-menu .product-header_tab-link` plus `!important` on
+contested properties.
+
+**`.element-decorate` was display-toggled** by the old embed. With that gone,
+Designer's `display` took over — force `display: block !important` and animate
+opacity.
+
+**Webflow number fields are integers only.** Prices are stored in cents.
+
+**`Product Catalogs` is at Webflow's 10-reference-field cap.** The
+`Colorways` multi-reference was rejected. Not needed — filter a Collection List
+by "Product = Current" instead. Four dead Shopify reference fields could be
+deleted to free slots: `product-collections-2`, `product-type-4`,
+`product-option-2-values-2`, `product-option-3-values-2`.
+
+**Slater page routing was broken by an off-by-one-letter bug** — it targeted
+`detail_product` (dead template) instead of `detail_products` (live). Don't
+port URL-segment routing; use explicit `data-page` attributes.
+
+**Webflow custom code is inlined per page** and re-downloaded every pageview.
+The repo file is CDN-cached across the session. Keep code in the repo.
+
+**Slater** hosts the legacy JS at `slater.app/17625.js`. The previous developer
+is gone; files are fetchable by pasting URLs into a browser. Nine files total,
+two of which (`menu.js`, scrollbar CSS) load site-wide — **do not remove the
+Slater loader until all nine are ported.**
+
+---
+
+## 9. Working style notes
+
+- Verify with real API calls, not spec docs — Fourthwall's OpenAPI spec is
+  incomplete (`additionalInformation` and `sizeGuide` aren't in it)
+- Nothing gets deleted until its replacement is verified
+- Read the DOM before assuming structure; several assumptions this session
+  were wrong until checked
