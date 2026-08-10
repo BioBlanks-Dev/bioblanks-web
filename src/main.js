@@ -7,6 +7,7 @@
 
 import BBCart from './cart.js';
 import initPDP from './pdp.js';
+import initCartDrawer from './cart-drawer.js';
 
 // Resolve sibling files relative to whatever version of this module was
 // loaded. Pointing the Webflow loader at @v1.2.3 therefore also loads the
@@ -24,9 +25,13 @@ function loadStyles(href) {
 }
 
 loadStyles(`${HERE}pdp.css`);
+loadStyles(`${HERE}cart-drawer.css`);
 
 // Expose globally so page-level custom code in Webflow can reach it.
 window.BBCart = BBCart;
+
+// The cart drawer listens for BBCart events, so wire it before init() runs.
+initCartDrawer();
 
 BBCart.init()
   .then(() => {

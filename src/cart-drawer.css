@@ -1,0 +1,197 @@
+/* ==========================================================================
+   BioBlanks — cart drawer
+   Built and controlled by cart-drawer.js. Slides in from the right, renders
+   line items from the Fourthwall cart, and links out to hosted checkout.
+   ========================================================================== */
+
+:root {
+  --bbd-ink: #14140f;
+  --bbd-ink-soft: #5f5f59;
+  --bbd-line: #e6e5e0;
+  --bbd-paper: #fff;
+  --bbd-green: #74f081;
+  --bbd-green-hover: #63e371;
+  --bbd-width: 400px;
+}
+
+html.bb-drawer-lock { overflow: hidden; }
+
+.bb-drawer {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.bb-drawer.is-open { visibility: visible; pointer-events: auto; }
+
+.bb-drawer_overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(20, 20, 15, .38);
+  opacity: 0;
+  transition: opacity .3s ease;
+}
+
+.bb-drawer.is-open .bb-drawer_overlay { opacity: 1; }
+
+.bb-drawer_panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: min(var(--bbd-width), 100vw);
+  background: var(--bbd-paper);
+  color: var(--bbd-ink);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform .4s cubic-bezier(.16, 1, .3, 1);
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  box-shadow: -8px 0 40px rgba(20, 20, 15, .12);
+}
+
+.bb-drawer.is-open .bb-drawer_panel { transform: translateX(0); }
+.bb-drawer.is-busy .bb-drawer_panel { opacity: .6; pointer-events: none; }
+
+.bb-drawer_head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 24px;
+  border-bottom: 1px solid var(--bbd-line);
+}
+
+.bb-drawer_title {
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.bb-drawer_close {
+  background: none;
+  border: 0;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--bbd-ink);
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.bb-drawer_items {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 24px;
+}
+
+.bb-drawer_empty {
+  color: var(--bbd-ink-soft);
+  font-size: 13px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+.bb-line {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  gap: 14px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--bbd-line);
+}
+
+.bb-line_media {
+  width: 64px;
+  aspect-ratio: 4 / 5;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #ebebe9;
+}
+
+.bb-line_media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.bb-line_body { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.bb-line_title { font-size: 13px; font-weight: 500; }
+.bb-line_variant { font-size: 12px; color: var(--bbd-ink-soft); }
+
+.bb-line_controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.bb-qty {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--bbd-line);
+  border-radius: 999px;
+}
+
+.bb-qty_btn {
+  width: 26px;
+  height: 26px;
+  background: none;
+  border: 0;
+  cursor: pointer;
+  font-size: 14px;
+  color: var(--bbd-ink);
+}
+
+.bb-qty_value { min-width: 22px; text-align: center; font-size: 12px; }
+
+.bb-line_remove {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 11px;
+  color: var(--bbd-ink-soft);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.bb-line_price { font-size: 13px; font-weight: 500; white-space: nowrap; }
+
+.bb-drawer_foot {
+  border-top: 1px solid var(--bbd-line);
+  padding: 20px 24px 24px;
+}
+
+.bb-drawer_subtotal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 14px;
+}
+
+.bb-drawer_checkout {
+  width: 100%;
+  height: 52px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--bbd-green);
+  color: var(--bbd-ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .2s ease, opacity .2s ease;
+}
+
+.bb-drawer_checkout:hover:not(:disabled) { background: var(--bbd-green-hover); }
+.bb-drawer_checkout:disabled { opacity: .4; cursor: not-allowed; }
+
+.bb-drawer_note {
+  font-size: 11px;
+  color: var(--bbd-ink-soft);
+  text-align: center;
+  margin: 12px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bb-drawer_overlay,
+  .bb-drawer_panel { transition: none; }
+}
