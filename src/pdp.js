@@ -228,7 +228,7 @@ function buildTabHeaders() {
    ------------------------------------------------------------------------- */
 
 function buildTraceability() {
-  const anchor = document.querySelector('[data-bb-trace-anchor]');
+  const anchor = document.querySelector('#bb-trace-anchor, [data-bb-trace-anchor]');
   const items = state.pdp.traceability;
   if (!anchor || !Array.isArray(items) || !items.length) return;
 
