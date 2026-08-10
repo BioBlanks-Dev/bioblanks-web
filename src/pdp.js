@@ -438,15 +438,18 @@ function buildGallery() {
   window.addEventListener('load', sizeThumbRail, { once: true });
 }
 
-// Give the sticky rail a real height equal to the thumbnails, with a matching
-// negative margin so it still takes no space in the column flow. Sticky then
-// releases exactly when the thumbnails' bottom reaches the gallery bottom.
+// Give the sticky rail a real height equal to the thumbnails so its sticky pin
+// releases exactly when the thumbnails' bottom meets the gallery bottom. The
+// compensating negative margin must go on the SHOTS, not the rail — sticky
+// counts the element's own margins in its constraint box, so a negative margin
+// on the rail would cancel the height gain and it would release too late.
 function sizeThumbRail() {
-  if (!els.rail || !els.thumbs) return;
+  if (!els.rail || !els.thumbs || !els.shots) return;
   const h = els.thumbs.offsetHeight;
   if (!h) return;
   els.rail.style.height = `${h}px`;
-  els.rail.style.marginBottom = `${-h}px`;
+  els.rail.style.marginBottom = ''; // clear the earlier (ineffective) approach
+  els.shots.style.marginTop = `${-h}px`; // pull the shots back up to close the gap
 }
 
 function renderGallery() {
