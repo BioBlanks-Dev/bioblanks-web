@@ -32,7 +32,7 @@
 
 @media screen and (min-width: 992px) {
   .product-header_component {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 3fr 2fr; /* gallery 60% / panel 40% */
     grid-column-gap: 0;
     grid-row-gap: 0;
     align-items: start;
