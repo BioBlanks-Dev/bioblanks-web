@@ -256,7 +256,9 @@
   letter-spacing: .12em;
   text-transform: uppercase;
   color: var(--bb-ink-soft);
-  margin: 0 0 16px;
+  /* Match the tab-row's bottom margin (26px) so the breadcrumb-to-tabs gap
+     and the tabs-to-title gap read as an even rhythm. */
+  margin: 0 0 26px;
 }
 .bb-breadcrumb-link { color: inherit; text-decoration: none; opacity: .6; transition: opacity .2s ease; }
 .bb-breadcrumb-link:hover { opacity: 1; }
