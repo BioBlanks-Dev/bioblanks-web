@@ -440,8 +440,15 @@ function syncActionButtons(activeLink) {
     (panel && panel.querySelector(SEL.tabLink));
   const isCustomization = link ? tabName(link).includes('custom') : false;
 
-  const cart = document.querySelector(SEL.addToCart);
-  const project = document.querySelector(SEL.projectLink);
+  // Scope to the docked actions wrap so we never toggle a duplicate button
+  // elsewhere on the page (mobile tabs, nav, etc.).
+  const actions =
+    (panel && panel.querySelector('.product-actions_wrap')) ||
+    document.querySelector('.product-actions_wrap');
+  const cart = actions ? actions.querySelector(SEL.addToCart)
+                       : document.querySelector(SEL.addToCart);
+  const project = actions ? actions.querySelector(SEL.projectLink)
+                          : document.querySelector(SEL.projectLink);
   if (cart) cart.setAttribute('data-bb-hidden', String(isCustomization));
   if (project) project.setAttribute('data-bb-hidden', String(!isCustomization));
 }
