@@ -415,12 +415,12 @@ function buildGallery() {
   if (!column) return;
   column.classList.add('bb-js-gallery');
 
-  const rail = el('div', 'bb-thumb-rail');
+  els.rail = el('div', 'bb-thumb-rail');
   els.thumbs = el('div', 'bb-thumbs');
-  rail.append(els.thumbs);
+  els.rail.append(els.thumbs);
 
   els.shots = el('div', 'bb-shots');
-  column.insertBefore(rail, column.firstChild);
+  column.insertBefore(els.rail, column.firstChild);
   column.append(els.shots);
 
   // The gallery grows the page after Lenis/ScrollTrigger have cached the
@@ -429,6 +429,24 @@ function buildGallery() {
   // time this module runs, so schedule the nudges unconditionally.
   [200, 600, 1200].forEach((t) => setTimeout(recomputeScroll, t));
   window.addEventListener('load', recomputeScroll, { once: true });
+
+  // The thumbnails are absolutely positioned and hang below the (zero-height)
+  // sticky rail, so keep the rail's height in sync with them — otherwise the
+  // sticky pin releases only at the column bottom and the thumbs overhang past
+  // the gallery into the next section.
+  window.addEventListener('resize', () => requestAnimationFrame(sizeThumbRail));
+  window.addEventListener('load', sizeThumbRail, { once: true });
+}
+
+// Give the sticky rail a real height equal to the thumbnails, with a matching
+// negative margin so it still takes no space in the column flow. Sticky then
+// releases exactly when the thumbnails' bottom reaches the gallery bottom.
+function sizeThumbRail() {
+  if (!els.rail || !els.thumbs) return;
+  const h = els.thumbs.offsetHeight;
+  if (!h) return;
+  els.rail.style.height = `${h}px`;
+  els.rail.style.marginBottom = `${-h}px`;
 }
 
 function renderGallery() {
@@ -469,6 +487,7 @@ function renderGallery() {
 
   observeShots();
   recomputeScroll();
+  requestAnimationFrame(sizeThumbRail);
 }
 
 // Force the site's smooth-scroll engine (Lenis) and GSAP ScrollTrigger to
