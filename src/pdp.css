@@ -654,8 +654,10 @@
                 0 0 0 4px var(--bb-ink);
   }
 
-  /* Match the Add to Cart corner radius to the size buttons (8px). */
-  .add-to-cart_button { border-radius: 8px; }
+  /* Match the Add to Cart corner radius to the size buttons (8px). !important
+     because the base .add-to-cart_button pill rule (999px) sits later in the
+     file and would otherwise win at equal specificity. */
+  .add-to-cart_button { border-radius: 8px !important; }
 }
 
 /* --------------------------------------------------------------------------
