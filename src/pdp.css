@@ -307,8 +307,11 @@
   text-align: right;
 }
 
-/* Customization tab — 12px body, step list, and template download links */
-.bb-custom { margin-top: 22px; font-size: 12px; }
+/* Customization tab — 12px body, step list, and template download links.
+   The gallery block above contributes a fixed 24px Webflow margin, which reads
+   as too tight on very wide (4K/32") displays. Scale the gap up with the
+   viewport so large screens breathe while laptops stay near the original 24px. */
+.bb-custom { margin-top: clamp(24px, 4vw - 34px, 52px); font-size: 12px; }
 .bb-custom .bb-desc { font-size: 12px; }
 .bb-custom-intro { font-size: 12px; margin: 0 0 18px; } /* intro copy above the gallery */
 
