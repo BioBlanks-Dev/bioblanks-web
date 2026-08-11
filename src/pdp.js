@@ -376,22 +376,14 @@ function specRow(label, value) {
   return row;
 }
 
-function buildMaterials() {
-  const pane = findMaterialsPane();
-  if (!pane) return;
-
+// Builds the Materials content (Composition + specs + Traceability) as a fresh
+// element from CMS data, so both the desktop and mobile panes can use it.
+function materialsContent() {
   const mat = state.pdp.materials;
   const trace = state.pdp.traceability;
   const hasComposition = mat && Array.isArray(mat.composition) && mat.composition.length;
   const hasTrace = Array.isArray(trace) && trace.length;
-  if (!mat && !hasTrace) return; // no CMS data — leave the original tab as-is
-
-  // Replace the original Webflow materials/details content with ours.
-  [...pane.children].forEach((child) => {
-    if (!child.classList.contains('bb-tab-header') && !child.classList.contains('bb-materials')) {
-      child.style.display = 'none';
-    }
-  });
+  if (!mat && !hasTrace) return null;
 
   const wrap = el('div', 'bb-materials');
 
@@ -429,7 +421,23 @@ function buildMaterials() {
     wrap.append(ul);
   }
 
-  pane.append(wrap);
+  return wrap;
+}
+
+function buildMaterials() {
+  const pane = findMaterialsPane();
+  if (!pane) return;
+  const content = materialsContent();
+  if (!content) return; // no CMS data — leave the original tab as-is
+
+  // Replace the original Webflow materials/details content with ours.
+  [...pane.children].forEach((child) => {
+    if (!child.classList.contains('bb-tab-header') && !child.classList.contains('bb-materials')) {
+      child.style.display = 'none';
+    }
+  });
+
+  pane.append(content);
 }
 
 /* -------------------------------------------------------------------------
@@ -550,6 +558,14 @@ function buildCustomization() {
     else pane.insertBefore(intro, pane.firstChild);
   }
 
+  pane.append(customContent());
+}
+
+// Builds the Customization text content (How to Get Started + Mockup Templates
+// + Minimums) as a fresh element, shared by the desktop and mobile panes. The
+// intro copy and the image slider are handled separately by each caller.
+function customContent() {
+  const c = state.pdp.customization || {};
   const wrap = el('div', 'bb-custom');
 
   if (Array.isArray(c.steps) && c.steps.length) {
@@ -582,7 +598,125 @@ function buildCustomization() {
     wrap.append(el('p', 'bb-desc', c.minimums));
   }
 
-  pane.append(wrap);
+  return wrap;
+}
+
+/* -------------------------------------------------------------------------
+   Mobile tab content
+
+   The page carries a second, mobile-only tab set (.product-header_tabs
+   .is-mobile) whose panes hold placeholder Webflow content (lorem, "No items
+   found"), divider lines and duplicated accordions. Replace each pane's
+   content with the same CMS-driven content the desktop tabs show, laid out
+   for mobile:
+     - Overview      → Product Details only (title/price/desc/colour/size are
+                       already shown above the tabs on mobile)
+     - Materials     → Composition + specs + Traceability
+     - Customization → intro + the native example slider (reused in place) +
+                       How to Get Started / Mockup Templates / Minimums
+     - Sizing & Fit  → the native Measurements table (reused in place)
+   The native slider and fit-table are real Webflow elements, so they're moved
+   (not cloned) to keep Webflow's own slider behaviour. Desktop's separate tab
+   set is untouched (these panes are display:none at ≥992px).
+   ------------------------------------------------------------------------- */
+
+function mobilePane(kind) {
+  const root = document.querySelector('.product-header_tabs.is-mobile');
+  if (!root) return null;
+  const menu = root.querySelector('.product-header_tabs-menu');
+  const content = root.querySelector('.product-header_tabs-content');
+  if (!menu || !content) return null;
+  const test = {
+    overview: (t) => t.includes('overview'),
+    customization: (t) => t.includes('custom'),
+    materials: (t) => t.includes('material'),
+    sizefit: (t) => t.includes('size') || t.includes('fit'),
+  }[kind];
+  const link = [...menu.querySelectorAll('.product-header_tab-link')].find((l) =>
+    test((l.textContent || '').trim().toLowerCase())
+  );
+  if (!link) return null;
+  const tab = link.getAttribute('data-w-tab');
+  return content.querySelector(
+    `.product-header_tab-details[data-w-tab="${tab}"]`
+  );
+}
+
+// Hide every current child of a pane (the native placeholder content) so our
+// ported content is all that shows. Anything we want to keep is moved out
+// first, before this runs.
+function clearPaneContent(pane) {
+  [...pane.children].forEach((child) => {
+    child.style.display = 'none';
+  });
+}
+
+function buildMobileTabContent() {
+  if (!document.querySelector('.product-header_tabs.is-mobile')) return;
+  const pdp = state.pdp;
+
+  // Overview → Product Details only.
+  const ov = mobilePane('overview');
+  if (ov && Array.isArray(pdp.productDetails) && pdp.productDetails.length) {
+    clearPaneContent(ov);
+    const wrap = el('div', 'bb-mtab');
+    wrap.append(el('h2', 'bb-panel-heading', 'Product Details'));
+    const ul = el('ul', 'bb-bullets');
+    pdp.productDetails.forEach((b) => ul.append(el('li', null, b)));
+    wrap.append(ul);
+    ov.append(wrap);
+  }
+
+  // Materials → Composition + specs + Traceability.
+  const mt = mobilePane('materials');
+  if (mt) {
+    const content = materialsContent();
+    if (content) {
+      clearPaneContent(mt);
+      const wrap = el('div', 'bb-mtab');
+      wrap.append(content);
+      mt.append(wrap);
+    }
+  }
+
+  // Customization → intro + native slider (reused) + steps/templates/minimums.
+  const cu = mobilePane('customization');
+  if (cu && pdp.customization) {
+    const slider = cu.querySelector('.w-slider');
+    const wrap = el('div', 'bb-mtab bb-custom-mtab');
+    if (pdp.customization.intro) {
+      wrap.append(el('p', 'bb-desc bb-custom-intro', pdp.customization.intro));
+    }
+    if (slider) {
+      slider.style.display = ''; // in case a hidden ancestor set it
+      wrap.append(slider); // moves the live Webflow slider into our layout
+    }
+    wrap.append(customContent());
+    clearPaneContent(cu); // hide leftover native content (slider already moved)
+    cu.append(wrap);
+  }
+
+  // Sizing & Fit → the native Measurements table (reused).
+  const sf = mobilePane('sizefit');
+  if (sf) {
+    const table =
+      sf.querySelector('.embed-table.w-embed') ||
+      sf.querySelector('.fit-table-wrap') ||
+      sf.querySelector('.fit-table');
+    const wrap = el('div', 'bb-mtab');
+    wrap.append(el('h2', 'bb-panel-heading', 'Measurements'));
+    if (table) {
+      table.style.display = '';
+      wrap.append(table);
+    }
+    clearPaneContent(sf);
+    sf.append(wrap);
+  }
+
+  // Webflow sliders size their slides on load/resize; the move above happens
+  // after that, so nudge a recompute once the pane is laid out.
+  requestAnimationFrame(() => window.dispatchEvent(new Event('resize')));
+  setTimeout(() => window.dispatchEvent(new Event('resize')), 400);
 }
 
 /* -------------------------------------------------------------------------
@@ -983,6 +1117,7 @@ export default function initPDP() {
   buildCustomization();
   buildMaterials();
   buildSizeFit();
+  buildMobileTabContent();
 
   if (els.anchor && state.colorways.length) {
     buildPanel();

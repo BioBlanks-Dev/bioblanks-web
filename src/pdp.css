@@ -677,6 +677,23 @@
     flex: 0 0 auto;
     white-space: nowrap;
   }
+
+  /* Ported tab content (Overview / Materials / Customization / Sizing & Fit).
+     The inner blocks (.bb-materials, .bb-custom, .bb-bullets, the fit-table)
+     already carry their styling; this just spaces them under the tab bar. */
+  .bb-mtab { margin-top: 14px; }
+  .bb-mtab > .bb-panel-heading:first-child,
+  .bb-mtab > .bb-materials > .bb-panel-heading:first-child {
+    margin-top: 0;
+  }
+  /* Reused native measurements table — let it scroll if it overflows. */
+  .bb-mtab .embed-table,
+  .bb-mtab .fit-table-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Reused native customization slider sits between the intro and the steps. */
+  .bb-custom-mtab .w-slider { margin: 6px 0 4px; background: transparent; }
 }
 
 /* --------------------------------------------------------------------------
