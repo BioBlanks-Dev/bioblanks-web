@@ -519,6 +519,7 @@ function renderSizes() {
 function buildGallery() {
   const column = document.querySelector(SEL.galleryColumn);
   if (!column) return;
+  els.galleryColumn = column;
   column.classList.add('bb-js-gallery');
 
   els.rail = el('div', 'bb-thumb-rail');
@@ -552,9 +553,46 @@ function buildGallery() {
   // The thumbnails are absolutely positioned and hang below the (zero-height)
   // sticky rail, so keep the rail's height in sync with them — otherwise the
   // sticky pin releases only at the column bottom and the thumbs overhang past
-  // the gallery into the next section.
-  window.addEventListener('resize', () => requestAnimationFrame(sizeThumbRail));
-  window.addEventListener('load', sizeThumbRail, { once: true });
+  // the gallery into the next section. Also recompute the mobile full-bleed.
+  window.addEventListener('resize', () =>
+    requestAnimationFrame(() => {
+      sizeThumbRail();
+      fullBleedGallery();
+    })
+  );
+  window.addEventListener('load', () => {
+    sizeThumbRail();
+    fullBleedGallery();
+  }, { once: true });
+}
+
+// On mobile/tablet the shots + dots are pulled out to the full viewport width.
+// The parent isn't centered in the viewport, so a pure-CSS calc mis-aligns it —
+// measure the natural left offset and negate it. Cleared on desktop.
+function fullBleedGallery() {
+  const col = els.galleryColumn;
+  if (!col || !els.shots) return;
+
+  if (window.innerWidth > 991) {
+    col.style.position = '';
+    els.shots.style.width = '';
+    els.shots.style.marginLeft = '';
+    if (els.dots) {
+      els.dots.style.width = '';
+      els.dots.style.left = '';
+    }
+    return;
+  }
+
+  col.style.position = 'relative';
+  els.shots.style.width = '100vw';
+  els.shots.style.marginLeft = '0px';
+  const left = Math.round(els.shots.getBoundingClientRect().left);
+  els.shots.style.marginLeft = `${-left}px`;
+  if (els.dots) {
+    els.dots.style.width = '100vw';
+    els.dots.style.left = `${-left}px`;
+  }
 }
 
 // Give the sticky rail a real height equal to the thumbnails so its sticky pin
@@ -620,7 +658,10 @@ function renderGallery() {
 
   observeShots();
   recomputeScroll();
-  requestAnimationFrame(sizeThumbRail);
+  requestAnimationFrame(() => {
+    sizeThumbRail();
+    fullBleedGallery();
+  });
 }
 
 // Highlight the dot for the shot currently centered in the horizontal carousel.

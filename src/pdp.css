@@ -127,10 +127,11 @@
 @media screen and (max-width: 991px) {
   .bb-thumb-rail { display: none; }
 
-  /* Edge-to-edge horizontal carousel: break out of the page's side padding to
-     full viewport width and swipe one image at a time with scroll-snap. */
+  /* Edge-to-edge horizontal carousel, swiping one image at a time. The
+     full-bleed width + left offset are set precisely in JS (fullBleedGallery),
+     because the parent isn't centered so a CSS calc mis-aligns it. */
   .slider-product_component { overflow: visible !important; }
-  .product_swiper-left.bb-js-gallery { overflow: visible !important; }
+  .product_swiper-left.bb-js-gallery { overflow: visible !important; position: relative; }
   .bb-shots {
     display: flex;
     flex-direction: row;
@@ -140,8 +141,6 @@
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     margin-top: 0 !important; /* clear the desktop sticky-rail offset */
-    width: 100vw;
-    margin-left: calc(50% - 50vw); /* full-bleed regardless of parent padding */
   }
   .bb-shots::-webkit-scrollbar { display: none; }
   .bb-shot {
@@ -149,12 +148,14 @@
     scroll-snap-align: center;
   }
 
-  /* Dot pagination under the gallery. */
+  /* Dot pagination overlaid on the bottom of the image (width + left in JS). */
   .bb-dots {
+    position: absolute;
+    bottom: 16px;
+    z-index: 2;
     display: flex;
     justify-content: center;
     gap: 8px;
-    padding: 14px 0 4px;
   }
   .bb-dot {
     width: 7px;
@@ -162,7 +163,8 @@
     padding: 0;
     border: 0;
     border-radius: 50%;
-    background: var(--bb-ink-faint);
+    background: rgba(20, 20, 15, .3);
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, .35);
     cursor: pointer;
     transition: background .2s ease, transform .2s ease;
   }
