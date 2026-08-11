@@ -301,6 +301,51 @@ function orderMobileTabs() {
 }
 
 /* -------------------------------------------------------------------------
+   Mobile tab alignment
+
+   The mobile tab bar sits in the header section, a different container from
+   the size grid / Add to Cart, so its left edge doesn't line up with the page
+   content padding — the first tab (Overview + its gold dot) hangs to the left.
+   Pad the menu so the first tab starts exactly at the size selector's left
+   edge. Measured (not hardcoded) because the two containers' paddings differ,
+   and re-run on resize. Skipped when the bar is hidden (desktop).
+   ------------------------------------------------------------------------- */
+
+let mobileTabsBasePad = null;
+
+function alignMobileTabs() {
+  const menu = document.querySelector(
+    '.product-header_tabs.is-mobile .product-header_tabs-menu'
+  );
+  const firstLink = menu && menu.querySelector('.product-header_tab-link');
+  const ref =
+    els.mSizes ||
+    document.querySelector('.bb-m-sizes') ||
+    document.querySelector('.add-to-cart_button');
+  if (!menu || !firstLink || !ref) return;
+  if (!menu.offsetParent) return; // hidden (desktop) — leave it alone
+
+  if (mobileTabsBasePad === null) {
+    mobileTabsBasePad = parseFloat(getComputedStyle(menu).paddingLeft) || 0;
+  }
+  // Reset to the CSS base before measuring so repeated runs don't compound.
+  menu.style.paddingLeft = `${mobileTabsBasePad}px`;
+  const target = ref.getBoundingClientRect().left;
+  const current = firstLink.getBoundingClientRect().left;
+  const pad = Math.max(0, mobileTabsBasePad + (target - current));
+  menu.style.paddingLeft = `${pad}px`;
+}
+
+function scheduleMobileTabAlign() {
+  requestAnimationFrame(alignMobileTabs);
+  [200, 600, 1200].forEach((t) => setTimeout(alignMobileTabs, t));
+  window.addEventListener('load', alignMobileTabs, { once: true });
+  window.addEventListener('resize', () =>
+    requestAnimationFrame(alignMobileTabs)
+  );
+}
+
+/* -------------------------------------------------------------------------
    Materials tab — Composition (fiber icon + name + %), fabric specs
    (Weight / Yarn) and the Traceability chain, all from CMS (pdp-json,
    regenerated from the real Product fields). Matches the prototype.
@@ -951,6 +996,10 @@ export default function initPDP() {
   } else {
     console.warn('[PDP] no colorway data found — panel not built.');
   }
+
+  // Align the mobile tab bar's first tab to the content padding (needs the
+  // size grid / cart in place, so run after the panel is built).
+  scheduleMobileTabAlign();
 
   BBCart.on('cartUpdate', () => {
     document.querySelectorAll('[data-bb-cart-count]').forEach((node) => {
