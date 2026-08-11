@@ -526,8 +526,21 @@ function buildGallery() {
   els.rail.append(els.thumbs);
 
   els.shots = el('div', 'bb-shots');
+  els.dots = el('div', 'bb-dots');
   column.insertBefore(els.rail, column.firstChild);
   column.append(els.shots);
+  column.append(els.dots);
+
+  // On mobile/tablet .bb-shots becomes a horizontal, edge-to-edge scroll-snap
+  // carousel (see pdp.css). Keep the dot pagination in sync with the swipe.
+  els.shots.addEventListener('scroll', () => {
+    if (dotSyncQueued) return;
+    dotSyncQueued = true;
+    requestAnimationFrame(() => {
+      dotSyncQueued = false;
+      syncDots();
+    });
+  }, { passive: true });
 
   // The gallery grows the page after Lenis/ScrollTrigger have cached the
   // document height, so nudge them to re-measure a few times as late assets
@@ -564,6 +577,7 @@ function renderGallery() {
   const images = cw?.gallery || [];
   els.shots.innerHTML = '';
   els.thumbs.innerHTML = '';
+  els.dots.innerHTML = '';
 
   images.forEach((src, i) => {
     const shot = el('div', 'bb-shot');
@@ -592,11 +606,32 @@ function renderGallery() {
       shot.scrollIntoView({ behavior: 'smooth', block: 'center' })
     );
     els.thumbs.append(thumb);
+
+    // Mobile pagination dot for this shot.
+    const dot = el('button', 'bb-dot');
+    dot.type = 'button';
+    dot.setAttribute('aria-label', `Go to image ${i + 1}`);
+    dot.setAttribute('aria-current', i === 0 ? 'true' : 'false');
+    dot.addEventListener('click', () =>
+      shot.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' })
+    );
+    els.dots.append(dot);
   });
 
   observeShots();
   recomputeScroll();
   requestAnimationFrame(sizeThumbRail);
+}
+
+// Highlight the dot for the shot currently centered in the horizontal carousel.
+let dotSyncQueued = false;
+function syncDots() {
+  if (!els.shots || !els.dots || !els.dots.children.length) return;
+  const w = els.shots.clientWidth || 1;
+  const idx = Math.max(0, Math.round(els.shots.scrollLeft / w));
+  [...els.dots.children].forEach((d, i) =>
+    d.setAttribute('aria-current', i === idx ? 'true' : 'false')
+  );
 }
 
 // Force the site's smooth-scroll engine (Lenis) and GSAP ScrollTrigger to

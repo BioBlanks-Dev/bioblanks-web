@@ -121,8 +121,55 @@
 .bb-thumb[aria-current="true"]:hover { opacity: 1; }
 .bb-thumb:focus-visible { outline: 2px solid var(--bb-ink); outline-offset: 2px; }
 
+/* Dot pagination is mobile-only; hidden on desktop where the rail is used. */
+.bb-dots { display: none; }
+
 @media screen and (max-width: 991px) {
   .bb-thumb-rail { display: none; }
+
+  /* Edge-to-edge horizontal carousel: break out of the page's side padding to
+     full viewport width and swipe one image at a time with scroll-snap. */
+  .slider-product_component { overflow: visible !important; }
+  .product_swiper-left.bb-js-gallery { overflow: visible !important; }
+  .bb-shots {
+    display: flex;
+    flex-direction: row;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    margin-top: 0 !important; /* clear the desktop sticky-rail offset */
+    width: 100vw;
+    margin-left: calc(50% - 50vw); /* full-bleed regardless of parent padding */
+  }
+  .bb-shots::-webkit-scrollbar { display: none; }
+  .bb-shot {
+    flex: 0 0 100%;
+    scroll-snap-align: center;
+  }
+
+  /* Dot pagination under the gallery. */
+  .bb-dots {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 0 4px;
+  }
+  .bb-dot {
+    width: 7px;
+    height: 7px;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: var(--bb-ink-faint);
+    cursor: pointer;
+    transition: background .2s ease, transform .2s ease;
+  }
+  .bb-dot[aria-current="true"] {
+    background: var(--bb-ink);
+    transform: scale(1.15);
+  }
 }
 
 /* --------------------------------------------------------------------------
