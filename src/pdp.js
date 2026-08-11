@@ -416,9 +416,16 @@ function buildCustomization() {
     });
   });
 
-  const wrap = el('div', 'bb-custom');
+  // Intro copy sits ABOVE the gallery — between the product title and slider.
+  pane.querySelectorAll('.bb-custom-intro').forEach((n) => n.remove());
+  if (c.intro) {
+    const intro = el('p', 'bb-desc bb-custom-intro', c.intro);
+    const header = pane.querySelector('.bb-tab-header');
+    if (header) header.insertAdjacentElement('afterend', intro);
+    else pane.insertBefore(intro, pane.firstChild);
+  }
 
-  if (c.blurb) wrap.append(el('p', 'bb-desc', c.blurb));
+  const wrap = el('div', 'bb-custom');
 
   if (Array.isArray(c.steps) && c.steps.length) {
     wrap.append(el('h2', 'bb-panel-heading', 'How to Get Started'));

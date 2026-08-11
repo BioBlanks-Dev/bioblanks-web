@@ -308,8 +308,9 @@
 }
 
 /* Customization tab — 12px body, step list, and template download links */
-.bb-custom { margin-top: 2px; font-size: 12px; }
+.bb-custom { margin-top: 22px; font-size: 12px; }
 .bb-custom .bb-desc { font-size: 12px; }
+.bb-custom-intro { font-size: 12px; margin: 0 0 18px; } /* intro copy above the gallery */
 
 .bb-steps {
   margin: 0;
