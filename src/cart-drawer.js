@@ -220,13 +220,13 @@ export default function initCartDrawer() {
     }
   });
 
-  // Hide the static nav counter immediately (it ships showing "0"), capturing
-  // its natural display first so the real count can restore it on sync.
-  document.querySelectorAll('[sf-cart-count]').forEach((el) => {
-    const d = getComputedStyle(el).display;
-    el.dataset.bbDisplay = d && d !== 'none' ? d : 'flex';
-    el.style.display = 'none';
-  });
+  // The nav counter is hidden by the <head> anti-flicker rule until we mark the
+  // cart ready. Seed it from the last-known (cached) count so it shows the right
+  // number instantly on refresh — no "0" flash, no reset — then BBCart's
+  // 'ready'/'cartUpdate' events reconcile it with the fetched cart.
+  document.documentElement.classList.add('bb-cart-ready');
+  const cached = BBCart.cachedCount();
+  document.querySelectorAll(COUNT_SEL).forEach((el) => applyCount(el, cached));
 
   BBCart.on('cartUpdate', ({ cart, type }) => {
     if (built) render(cart);

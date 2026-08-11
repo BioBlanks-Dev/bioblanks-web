@@ -15,6 +15,7 @@ const CONFIG = {
   checkoutDomain: 'checkout.bioblanks.com',
   currency: 'USD',
   storageKey: 'bb_cart_id',
+  countKey: 'bb_cart_count',
 };
 
 // ---------------------------------------------------------------------------
@@ -62,6 +63,15 @@ function off(event, handler) {
 }
 
 function emit(event, payload) {
+  // Cache the item count so the nav badge can render instantly on the next
+  // load, before the cart fetch resolves — no flash, no reset.
+  if (event === 'cartUpdate' || event === 'ready') {
+    try {
+      localStorage.setItem(CONFIG.countKey, String(itemCount()));
+    } catch {
+      /* ignore */
+    }
+  }
   listeners.get(event)?.forEach((fn) => {
     try {
       fn(payload);
@@ -192,6 +202,17 @@ function itemCount() {
   return cart.items.reduce((total, item) => total + (item.quantity || 0), 0);
 }
 
+// Last-known count from a previous load, read synchronously so the nav badge
+// can paint immediately without waiting on the network.
+function cachedCount() {
+  try {
+    const v = parseInt(localStorage.getItem(CONFIG.countKey), 10);
+    return Number.isFinite(v) && v > 0 ? v : 0;
+  } catch {
+    return 0;
+  }
+}
+
 function subtotal() {
   if (!cart?.items) return 0;
   return cart.items.reduce((total, item) => {
@@ -247,6 +268,7 @@ const BBCart = {
   removeItem,
   clearCart,
   itemCount,
+  cachedCount,
   subtotal,
   formatPrice,
   checkoutUrl,
