@@ -271,6 +271,36 @@ function buildTabHeaders() {
 }
 
 /* -------------------------------------------------------------------------
+   Mobile tab order
+
+   The page carries a second, mobile-only tab bar (.product-header_tabs
+   .is-mobile, in the header section) whose links are authored in a different
+   order than the desktop bar: Overview, Materials, Customization, Size & Fit.
+   Reorder its menu links to match desktop (Overview, Customization, Materials,
+   Size & Fit). Webflow links each menu link to its pane by data-w-tab name, so
+   moving the links only changes their visual/focus order — the tabs keep
+   working. Desktop's bar is a separate element and is left untouched.
+   ------------------------------------------------------------------------- */
+
+function orderMobileTabs() {
+  const menu = document.querySelector(
+    '.product-header_tabs.is-mobile .product-header_tabs-menu'
+  );
+  if (!menu) return;
+  const rank = (link) => {
+    const t = (link.textContent || '').trim().toLowerCase();
+    if (t.includes('overview')) return 0;
+    if (t.includes('custom')) return 1;
+    if (t.includes('material')) return 2;
+    if (t.includes('size') || t.includes('fit')) return 3;
+    return 4;
+  };
+  [...menu.querySelectorAll('.product-header_tab-link')]
+    .sort((a, b) => rank(a) - rank(b))
+    .forEach((link) => menu.append(link));
+}
+
+/* -------------------------------------------------------------------------
    Materials tab — Composition (fiber icon + name + %), fabric specs
    (Weight / Yarn) and the Traceability chain, all from CMS (pdp-json,
    regenerated from the real Product fields). Matches the prototype.
@@ -904,6 +934,7 @@ export default function initPDP() {
 
   buildBreadcrumb();
   buildTabHeaders();
+  orderMobileTabs();
   buildCustomization();
   buildMaterials();
   buildSizeFit();

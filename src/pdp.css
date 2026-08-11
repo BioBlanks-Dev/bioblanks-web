@@ -658,6 +658,25 @@
      because the base .add-to-cart_button pill rule (999px) sits later in the
      file and would otherwise win at equal specificity. */
   .add-to-cart_button { border-radius: 8px !important; }
+
+  /* Mobile tab bar: left-align and let it scroll instead of clipping at the
+     edges (the four labels are wider than a phone). Scoped to the .is-mobile
+     bar so the desktop bar is unaffected. */
+  .product-header_tabs.is-mobile .product-header_tabs-menu {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    gap: 20px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .product-header_tabs.is-mobile .product-header_tabs-menu::-webkit-scrollbar {
+    display: none;
+  }
+  .product-header_tabs.is-mobile .product-header_tab-link {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
 }
 
 /* --------------------------------------------------------------------------
