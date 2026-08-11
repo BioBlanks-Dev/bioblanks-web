@@ -653,6 +653,9 @@
                 0 0 0 2px var(--bb-paper),
                 0 0 0 4px var(--bb-ink);
   }
+
+  /* Match the Add to Cart corner radius to the size buttons (8px). */
+  .add-to-cart_button { border-radius: 8px; }
 }
 
 /* --------------------------------------------------------------------------
