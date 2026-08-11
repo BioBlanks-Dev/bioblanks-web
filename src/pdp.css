@@ -703,10 +703,15 @@
   .product_button-wrap { display: none !important; }
   .navbar_eccommerce .menu_in .bb-menu-cta {
     display: flex !important;
-    width: 100%;
+    width: 100%; /* fills .menu_in's padded content box — aligns with the links */
     justify-content: center;
-    border-radius: 16px !important;
     margin-top: 22px;
+  }
+  /* The green pill is the inner .button_container (180px, 40px radius); stretch
+     it to fill the button and square it to the 16px menu-panel radius. */
+  .navbar_eccommerce .menu_in .bb-menu-cta .button_container {
+    width: 100%;
+    border-radius: 16px !important;
   }
 }
 
