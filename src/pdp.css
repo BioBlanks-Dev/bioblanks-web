@@ -127,6 +127,12 @@
 @media screen and (max-width: 991px) {
   .bb-thumb-rail { display: none; }
 
+  /* Let the product header (gallery first) run up to the top of the viewport,
+     beneath the fixed nav — drop the 88px nav-clearance margin, PDP-scoped. */
+  .padding-section-product:has(.product-header_component) {
+    margin-top: 0 !important;
+  }
+
   /* Edge-to-edge horizontal carousel, swiping one image at a time. The
      full-bleed width + left offset are set precisely in JS (fullBleedGallery),
      because the parent isn't centered so a CSS calc mis-aligns it. */
