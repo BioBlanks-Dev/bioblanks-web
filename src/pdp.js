@@ -357,6 +357,26 @@ function scheduleMobileTabAlign() {
    untouched.
    ------------------------------------------------------------------------- */
 
+/* -------------------------------------------------------------------------
+   "Explore Key Features" section — relabel its header to the product SKU and
+   drop the divider line beneath it. One responsive component
+   (.feature_component-responsive); the "divider" is the 1px bottom border on
+   the header wrapper (.description-feature-top).
+   ------------------------------------------------------------------------- */
+
+function relabelFeatureSection() {
+  document
+    .querySelectorAll('.feature_component-responsive, .feature_component')
+    .forEach((sec) => {
+      if (state.pdp.sku) {
+        const head = sec.querySelector('.h2-description');
+        if (head) head.textContent = state.pdp.sku;
+      }
+      const top = sec.querySelector('.description-feature-top');
+      if (top) top.style.borderBottom = '0';
+    });
+}
+
 function relocateProjectCTA() {
   const btn = document.querySelector('.button-navigation.is-ecommerce');
   const menu = document.querySelector('.navbar_eccommerce .menu_in');
@@ -1150,6 +1170,7 @@ export default function initPDP() {
   buildMaterials();
   buildSizeFit();
   buildMobileTabContent();
+  relabelFeatureSection();
   relocateProjectCTA();
   window.addEventListener('resize', relocateProjectCTA);
 
