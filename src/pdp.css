@@ -127,11 +127,8 @@
 @media screen and (max-width: 991px) {
   .bb-thumb-rail { display: none; }
 
-  /* Sit the gallery under the fixed nav with a small top clearance so the nav
-     doesn't cover the image (was 88px; trimmed to 80px), PDP-scoped. */
-  .padding-section-product:has(.product-header_component) {
-    margin-top: 80px !important;
-  }
+  /* Leave the section's original top margin (88px) intact so the gallery keeps
+     its stock position under the nav — extending it up clips the photos. */
 
   /* Edge-to-edge horizontal carousel, swiping one image at a time. The
      full-bleed width + left offset are set precisely in JS (fullBleedGallery),
