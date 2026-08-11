@@ -346,6 +346,38 @@ function scheduleMobileTabAlign() {
 }
 
 /* -------------------------------------------------------------------------
+   Mobile: relocate the floating "Start New Project" CTA into the nav menu
+
+   On mobile the product's "Start New Project" button (.button-navigation
+   .is-ecommerce, sitting in a fixed .product_button-wrap) floats over the
+   page. Move it to the bottom of the nav dropdown — inside the rounded
+   .navbar_left panel, after the secondary links in .menu_in — and square its
+   corners to the panel (16px, via the .bb-menu-cta class in pdp.css). Gated to
+   ≤991px and restored to its original spot on desktop, so desktop is left
+   untouched.
+   ------------------------------------------------------------------------- */
+
+function relocateProjectCTA() {
+  const btn = document.querySelector('.button-navigation.is-ecommerce');
+  const menu = document.querySelector('.navbar_eccommerce .menu_in');
+  if (!btn || !menu) return;
+
+  const mobile = window.matchMedia('(max-width: 991px)').matches;
+  if (mobile) {
+    if (btn.parentElement !== menu) {
+      if (!btn.__bbHome) {
+        btn.__bbHome = { parent: btn.parentElement, next: btn.nextSibling };
+      }
+      btn.classList.add('bb-menu-cta');
+      menu.append(btn); // bottom of the menu
+    }
+  } else if (btn.__bbHome && btn.parentElement === menu) {
+    btn.classList.remove('bb-menu-cta');
+    btn.__bbHome.parent.insertBefore(btn, btn.__bbHome.next);
+  }
+}
+
+/* -------------------------------------------------------------------------
    Materials tab — Composition (fiber icon + name + %), fabric specs
    (Weight / Yarn) and the Traceability chain, all from CMS (pdp-json,
    regenerated from the real Product fields). Matches the prototype.
@@ -1118,6 +1150,8 @@ export default function initPDP() {
   buildMaterials();
   buildSizeFit();
   buildMobileTabContent();
+  relocateProjectCTA();
+  window.addEventListener('resize', relocateProjectCTA);
 
   if (els.anchor && state.colorways.length) {
     buildPanel();

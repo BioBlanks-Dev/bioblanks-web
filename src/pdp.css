@@ -696,6 +696,18 @@
   }
   /* Reused native customization slider sits between the intro and the steps. */
   .bb-custom-mtab .w-slider { margin: 6px 0 4px; background: transparent; }
+
+  /* "Start New Project" CTA relocated into the nav menu (moved by pdp.js).
+     Hide the now-empty floating wrapper, and square the button's corners to
+     the rounded .navbar_left menu panel (16px). */
+  .product_button-wrap { display: none !important; }
+  .navbar_eccommerce .menu_in .bb-menu-cta {
+    display: flex !important;
+    width: 100%;
+    justify-content: center;
+    border-radius: 16px !important;
+    margin-top: 22px;
+  }
 }
 
 /* --------------------------------------------------------------------------
