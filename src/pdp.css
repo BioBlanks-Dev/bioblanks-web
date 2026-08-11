@@ -595,6 +595,62 @@
 }
 
 /* --------------------------------------------------------------------------
+   5b. Mobile / tablet product summary (built by pdp.js, ≤991px only)
+   Desktop uses .bb-panel-controls inside the tabs; on mobile Webflow hides
+   the tabs and shows a native block, so these mirror the controls there.
+   -------------------------------------------------------------------------- */
+
+/* Never show the mobile-only pieces on desktop — the panel handles it there. */
+@media screen and (min-width: 992px) {
+  .bb-m-controls,
+  .bb-m-price { display: none !important; }
+}
+
+@media screen and (max-width: 991px) {
+  /* Breadcrumb sits above the product title, left aligned. */
+  .product-header_content-inner-wrapper > .bb-breadcrumb {
+    margin: 0 0 12px;
+    font-size: 11px;
+    text-align: left;
+  }
+
+  /* Sample price on the same line as the native title, pushed to the right.
+     (Size/weight are copied from the title in JS so the pair matches.) */
+  .bb-m-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .bb-m-price { white-space: nowrap; }
+
+  /* Drop the native wholesale block (Pricing Calculator + "$8.35 / unit"). */
+  .details-price-mobile { display: none !important; }
+
+  /* Colour + size selectors mirrored onto the mobile block. */
+  .bb-m-controls .bb-panel-heading { font-size: 14px; margin: 22px 0 10px; }
+
+  .bb-m-swatches { gap: 10px; }
+  .bb-m-swatches .bb-swatch {
+    width: 26px;
+    height: 26px;
+    aspect-ratio: auto;
+    border-radius: 50%;
+    overflow: hidden;
+    opacity: 1;
+    background: var(--bb-swatch, #d8d5cc);
+    box-shadow: inset 0 0 0 1px rgba(20, 20, 15, .14);
+  }
+  .bb-m-swatches .bb-swatch img { display: none; }
+  .bb-m-swatches .bb-swatch:hover { opacity: 1; }
+  .bb-m-swatches .bb-swatch[aria-pressed="true"] {
+    box-shadow: inset 0 0 0 1px rgba(20, 20, 15, .14),
+                0 0 0 2px var(--bb-paper),
+                0 0 0 4px var(--bb-ink);
+  }
+}
+
+/* --------------------------------------------------------------------------
    6. Action buttons — one visible per tab, driven by pdp.js
    -------------------------------------------------------------------------- */
 

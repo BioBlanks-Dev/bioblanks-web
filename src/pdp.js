@@ -185,8 +185,6 @@ function buildBreadcrumb() {
   const bc = state.pdp.breadcrumb;
   const panel = document.querySelector(SEL.panel);
   if (!bc || !panel) return;
-  const tabs = panel.querySelector('.product-header_tabs');
-  if (!tabs) return;
 
   const nav = el('p', 'bb-breadcrumb');
   if (bc.category) {
@@ -196,7 +194,59 @@ function buildBreadcrumb() {
     nav.append(el('span', 'bb-breadcrumb-sep', ' • '));
   }
   nav.append(el('span', 'bb-breadcrumb-current', state.pdp.title || ''));
-  panel.insertBefore(nav, tabs);
+
+  // Top of the panel. On desktop the elements above the tabs are display:none,
+  // so the breadcrumb stays visually where it was (just above the tabs); on
+  // mobile — where Webflow hides the tabs and shows a native product block —
+  // this lands it above the product title, as the prototype wants.
+  panel.insertBefore(nav, panel.firstChild);
+}
+
+/* -------------------------------------------------------------------------
+   Mobile / tablet product summary (≤991px)
+
+   On mobile Webflow hides the desktop tab panel (.product-header_tabs, which
+   holds .bb-panel-controls) and shows a native .is-mobile block instead. That
+   block has no colour/size selector and carries a separate wholesale-pricing
+   panel (.details-price-mobile). This mirrors the desktop panel onto the
+   native block: the sample price beside the title, plus hex-circle colour
+   swatches and the size grid — all driven by the SAME state as the desktop
+   controls (renderSwatches/renderSizes fill both container sets). Desktop is
+   untouched: everything here is hidden at ≥992px via CSS.
+   ------------------------------------------------------------------------- */
+
+function buildMobileControls() {
+  const panel = document.querySelector(SEL.panel);
+  if (!panel) return;
+
+  // Sample price on the same line as the native mobile title (matches desktop).
+  const title = panel.querySelector('.h1-product.is-mobile');
+  if (title && title.parentElement && state.pdp.samplePrice) {
+    const wrap = title.parentElement;
+    wrap.classList.add('bb-m-title-row');
+    if (!wrap.querySelector('.bb-m-price')) {
+      const price = el('span', 'bb-m-price', state.pdp.samplePrice);
+      // Match the native title's size/weight so the pair reads as one line.
+      const cs = getComputedStyle(title);
+      price.style.fontSize = cs.fontSize;
+      price.style.fontWeight = cs.fontWeight;
+      wrap.append(price);
+    }
+  }
+
+  // Colour circles + size grid, rendered by the shared render fns.
+  const controls = el('div', 'bb-m-controls');
+  controls.append(el('h2', 'bb-panel-heading', 'Color'));
+  els.mSwatches = el('div', 'bb-swatches bb-m-swatches');
+  controls.append(els.mSwatches);
+  controls.append(el('h2', 'bb-panel-heading', 'Size'));
+  els.mSizes = el('div', 'bb-sizes bb-m-sizes');
+  controls.append(els.mSizes);
+
+  // End of the native mobile block, just before the (mobile-hidden) tab panel.
+  const tabs = panel.querySelector('.product-header_tabs');
+  if (tabs) panel.insertBefore(controls, tabs);
+  else panel.append(controls);
 }
 
 /* -------------------------------------------------------------------------
@@ -464,27 +514,41 @@ function buildCustomization() {
    Swatches (image thumbnails) + size grid
    ------------------------------------------------------------------------- */
 
+// The desktop panel and the mobile summary each have their own swatch/size
+// containers; both render from — and drive — the same state.
+function swatchWraps() {
+  return [els.swatches, els.mSwatches].filter(Boolean);
+}
+function sizeWraps() {
+  return [els.sizes, els.mSizes].filter(Boolean);
+}
+
 function renderSwatches() {
-  const wrap = els.swatches;
-  wrap.innerHTML = '';
-  state.colorways.forEach((cw, i) => {
-    const chip = el('button', 'bb-swatch');
-    chip.type = 'button';
-    chip.setAttribute('aria-label', cw.name);
-    chip.setAttribute('aria-pressed', String(i === state.activeColor));
-    const img = el('img');
-    img.src = cw.gallery[0] || '';
-    img.alt = '';
-    img.loading = 'lazy';
-    chip.append(img);
-    chip.addEventListener('click', () => selectColorway(i));
-    wrap.append(chip);
+  swatchWraps().forEach((wrap) => {
+    wrap.innerHTML = '';
+    state.colorways.forEach((cw, i) => {
+      const chip = el('button', 'bb-swatch');
+      chip.type = 'button';
+      chip.setAttribute('aria-label', cw.name);
+      chip.setAttribute('aria-pressed', String(i === state.activeColor));
+      // Hex from the CMS drives the mobile circle (CSS reads --bb-swatch).
+      if (cw.swatch) chip.style.setProperty('--bb-swatch', cw.swatch);
+      const img = el('img');
+      img.src = cw.gallery[0] || '';
+      img.alt = '';
+      img.loading = 'lazy';
+      chip.append(img);
+      chip.addEventListener('click', () => selectColorway(i));
+      wrap.append(chip);
+    });
   });
 }
 
 function syncSwatches() {
-  [...els.swatches.children].forEach((chip, i) => {
-    chip.setAttribute('aria-pressed', String(i === state.activeColor));
+  swatchWraps().forEach((wrap) => {
+    [...wrap.children].forEach((chip, i) => {
+      chip.setAttribute('aria-pressed', String(i === state.activeColor));
+    });
   });
   if (els.colorNote) {
     els.colorNote.textContent = state.colorways[state.activeColor]?.name || '';
@@ -492,23 +556,24 @@ function syncSwatches() {
 }
 
 function renderSizes() {
-  const grid = els.sizes;
   const cw = state.colorways[state.activeColor];
-  grid.innerHTML = '';
-  SIZES.forEach((size) => {
-    const variantId = cw?.variants?.[size];
-    const btn = el('button', 'bb-size', size);
-    btn.type = 'button';
-    btn.disabled = !variantId;
-    btn.setAttribute('aria-pressed', String(state.activeSize === size));
-    if (variantId) {
-      btn.addEventListener('click', () => {
-        state.activeSize = size;
-        renderSizes();
-        syncBuyButton();
-      });
-    }
-    grid.append(btn);
+  sizeWraps().forEach((grid) => {
+    grid.innerHTML = '';
+    SIZES.forEach((size) => {
+      const variantId = cw?.variants?.[size];
+      const btn = el('button', 'bb-size', size);
+      btn.type = 'button';
+      btn.disabled = !variantId;
+      btn.setAttribute('aria-pressed', String(state.activeSize === size));
+      if (variantId) {
+        btn.addEventListener('click', () => {
+          state.activeSize = size;
+          renderSizes();
+          syncBuyButton();
+        });
+      }
+      grid.append(btn);
+    });
   });
 }
 
@@ -845,6 +910,7 @@ export default function initPDP() {
 
   if (els.anchor && state.colorways.length) {
     buildPanel();
+    buildMobileControls();
     renderSwatches();
     buildGallery();
     syncSwatches();
