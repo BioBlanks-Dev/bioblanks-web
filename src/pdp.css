@@ -669,8 +669,8 @@
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    /* Half the desktop 26px, to tighten the gap above the tab content. */
-    margin-bottom: 13px;
+    /* Tightened gap above the tab content (was 26px desktop → 13px → 6.5px). */
+    margin-bottom: 6.5px;
   }
   .product-header_tabs.is-mobile .product-header_tabs-menu::-webkit-scrollbar {
     display: none;
@@ -683,7 +683,7 @@
   /* Ported tab content (Overview / Materials / Customization / Sizing & Fit).
      The inner blocks (.bb-materials, .bb-custom, .bb-bullets, the fit-table)
      already carry their styling; this just spaces them under the tab bar. */
-  .bb-mtab { margin-top: 7px; }
+  .bb-mtab { margin-top: 3.5px; }
   .bb-mtab > .bb-panel-heading:first-child,
   .bb-mtab > .bb-materials > .bb-panel-heading:first-child {
     margin-top: 0;
