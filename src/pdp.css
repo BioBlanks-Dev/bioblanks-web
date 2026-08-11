@@ -615,14 +615,19 @@
   }
 
   /* Sample price on the same line as the native title, pushed to the right.
-     (Size/weight are copied from the title in JS so the pair matches.) */
+     (Size/weight are copied from the title in JS so the pair matches.)
+     !important overrides the Webflow combo class on the native wrapper, which
+     sets display:block at a higher specificity — scoped to ≤991px so desktop,
+     where the wrapper is display:none, is never affected. */
   .bb-m-title-row {
-    display: flex;
+    display: flex !important;
+    flex-wrap: nowrap;
     align-items: baseline;
     justify-content: space-between;
     gap: 16px;
   }
-  .bb-m-price { white-space: nowrap; }
+  .bb-m-title-row > .h1-product { flex: 0 1 auto; margin-bottom: 0; }
+  .bb-m-price { flex: 0 0 auto; white-space: nowrap; }
 
   /* Drop the native wholesale block (Pricing Calculator + "$8.35 / unit"). */
   .details-price-mobile { display: none !important; }
