@@ -713,6 +713,9 @@
     width: 100%;
     border-radius: 16px !important;
   }
+
+  /* Remove the "Explore Key Features" / clickable garment section on mobile. */
+  .feature_component-responsive { display: none !important; }
 }
 
 /* --------------------------------------------------------------------------
