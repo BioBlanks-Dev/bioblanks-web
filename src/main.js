@@ -15,35 +15,66 @@ import initSmoothScroll from './smooth-scroll.js';
 // stylesheet from @v1.2.3 — no hardcoded version to fall out of sync.
 const HERE = new URL('.', import.meta.url).href;
 
-// Stylesheets live alongside the modules. Loading from here rather than
-// Webflow's custom code keeps everything versioned in one place.
+// Load a stylesheet and resolve once it has actually applied (or failed). The
+// PDP reveal is gated on this so the stock Webflow layout can't flash between
+// the DOM build and the CSS becoming active.
 function loadStyles(href) {
-  if (document.querySelector(`link[href="${href}"]`)) return;
-  const link = document.createElement('link');
-  link.rel = 'stylesheet';
-  link.href = href;
-  document.head.appendChild(link);
+  if (document.querySelector(`link[href="${href}"]`)) return Promise.resolve();
+  return new Promise((resolve) => {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = href;
+    link.onload = () => resolve();
+    link.onerror = () => resolve(); // never block the reveal on a CSS failure
+    document.head.appendChild(link);
+  });
 }
 
-loadStyles(`${HERE}pdp.css`);
-loadStyles(`${HERE}cart-drawer.css`);
-
-// Smooth scroll (Lenis) is now owned by the repo — start it ASAP so the
-// experience matches the old Webflow-footer behaviour across the site.
-initSmoothScroll();
+// Kick the stylesheet fetches off immediately — <head> exists during parsing,
+// so this starts as early as the module runs (earlier when loaded in <head>).
+const cssReady = Promise.all([
+  loadStyles(`${HERE}pdp.css`),
+  loadStyles(`${HERE}cart-drawer.css`),
+]);
 
 // Expose globally so page-level custom code in Webflow can reach it.
 window.BBCart = BBCart;
 
-// The cart drawer listens for BBCart events, so wire it before init() runs.
-initCartDrawer();
+function boot() {
+  // Smooth scroll (Lenis) is owned by the repo now.
+  initSmoothScroll();
 
-BBCart.init()
-  .then(() => {
-    console.log('BioBlanks cart ready —', BBCart.itemCount(), 'item(s)');
-  })
-  .catch((err) => {
-    console.error('BioBlanks cart failed to initialise:', err);
-  });
+  // The cart drawer listens for BBCart events, so wire it before init() runs.
+  initCartDrawer();
 
-initPDP();
+  BBCart.init()
+    .then(() => {
+      console.log('BioBlanks cart ready —', BBCart.itemCount(), 'item(s)');
+    })
+    .catch((err) => {
+      console.error('BioBlanks cart failed to initialise:', err);
+    });
+
+  try {
+    initPDP();
+  } catch (err) {
+    console.error('BioBlanks PDP init failed:', err);
+  }
+
+  // Reveal the PDP only once our stylesheet has applied AND the DOM is built,
+  // so nothing shows until it's fully ours. The <head> anti-flicker rule keeps
+  // .product-header_component hidden until this class lands.
+  cssReady.then(() =>
+    requestAnimationFrame(() =>
+      document.documentElement.classList.add('bb-pdp-ready')
+    )
+  );
+}
+
+// Works whether the loader is in <head> (module may run before the body is
+// parsed) or the footer: DOM-dependent work always waits for a ready DOM.
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot, { once: true });
+} else {
+  boot();
+}
